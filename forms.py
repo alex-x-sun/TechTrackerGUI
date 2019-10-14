@@ -30,16 +30,14 @@ class TechScoutForm(FlaskForm):
     impact = TextAreaField('Building Environment Impact*', render_kw={"rows": 8},
                         validators = [DataRequired(), Length(min=2)])
     # sector = SelectMultipleField('')
-    embed_tech = TextAreaField('Embedded Technologies*',render_kw={"rows": 2},
-                            validators=[DataRequired(), Length(min=2, max=100)])
-    sources = TextAreaField('Sources*', render_kw={"rows": 3}, validators=[DataRequired(), Regexp(regex=r'[a-zA-z]+://[^s]*',
-                            message="input valid url")])
+    embed_tech = StringField('Embedded Technologies', validators=[DataRequired(), Regexp(regex =r'[a-zA-Z]|[0-9]|\;|\s',message="letter, number and ; only")])
+    sources = TextAreaField('Sources*', render_kw={"rows": 2}, validators=[DataRequired(), Regexp(regex=r'[a-zA-z]+://[^s]*',message="input valid url")])
+
 
     submit = SubmitField('Submit')
 
 
+class TechEditForm(FlaskForm):
 
 
-
-
-
+    submit = SubmitField('Submit')

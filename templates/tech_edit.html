@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% block content %}
-<h1>Technology Scout</h1>
-<h5>Finding new technologies, add basic information, and explore embedded technologies.</h5>
+<h1>Technology Edit</h1>
+<h5>Final editings for technology research. Check sources & commit to MIT TechTracker</h5>
 
 <div class="container">
     <form method="POST" action="">
@@ -108,7 +108,7 @@
                             <small>Redevelopment<input type="checkbox" value="redevelopment" name="mycheckbox"></small></p>
                             <small>Asset Operations and Monitoring<input type="checkbox" value="asset operations and monitoring" name="mycheckbox"></small> -->
                             {% for s in sectors %}
-                            <p><small>{{ s['sector'] }}<input type="checkbox" value="{{ s['sec_id'] }}" name="mycheckbox"></small></p>
+                            <p><small>{{ s }}<input type="checkbox" value="{{ s }}" name="mycheckbox"></small></p>
                             {% endfor %}
                             <br></br>
                         </div>
@@ -137,5 +137,9 @@
         </div>
     </form>
 </div>
+
+{% endblock content %}
+
+
 
 {% endblock content %}
