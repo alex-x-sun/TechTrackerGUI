@@ -2,8 +2,10 @@ from flask import Flask, render_template, url_for, flash, redirect, request, g, 
 from forms import RegistrationForm, LoginForm, TechScoutForm, TechAnalyticsForm
 from wtforms import TextField, IntegerField, TextAreaField, SubmitField, RadioField,SelectField
 from wtforms import validators, ValidationError
+from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from werkzeug.security import generate_password_hash, check_password_hash
 
+import json
 import pandas as pd
 from datetime import datetime
 
@@ -11,8 +13,11 @@ from datetime import datetime
 import sqlite3
 from dbTest import connect_db,  get_db
 
-# for milestone string process
+# if use Hydrogen or Jupyter
+# ipython3 kernelspec install-self
 
+# for milestone string process
+from milestones import milestones
 
 
 ###############################################################################
@@ -132,7 +137,7 @@ def login():
     return render_template('login.html', title='Login', user = user, form=form)
 
 @app.route("/tech_scout", methods=['GET', 'POST'])
-def tech_scout(tech=None):
+def tech_scout():
     user = get_current_user()
 
 
@@ -162,10 +167,12 @@ def tech_scout(tech=None):
 
 
         if form.validate_on_submit():
-            if tech:
-                tech_name = tech
-            else:
-                tech = form.tech_name.data
+            # if tech:
+            #     tech_name = tech
+            # else:
+            #     tech_name = form.tech_name.data
+
+            tech_name = form.tech_name.data
 
             db.execute('insert into tech_main_log (contributor, tech_name, scout_time, description, impact, desc_source, asso_names, impa_sector, emb_techs, wiki_link, category) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [user['user_id'], tech_name, datetime.timestamp(datetime.now()), form.description.data, form.impact.data, form.sources.data, form.associate_names.data, ';'.join(checkbox), form.embed_tech.data, form.wikilink.data, form.category.data])
 
@@ -174,10 +181,7 @@ def tech_scout(tech=None):
             flash(f'Technology {form.tech_name.data} added', 'success')
 
 
-            # if form.submit:
-            #     return redirect(url_for('home'))
-            # elif form.submit_proceed:
-            #     return redirect(url_for('tech_analytics'))
+
 
 
         else:
@@ -188,11 +192,13 @@ def tech_scout(tech=None):
         #     return redirect(url_for('home'))
         # else:
 
+
+
+    return render_template('tech_scout.html', title='Technology Scout', user= user, form=form, sectors = sectors_results, tech_name=tech_name)
+
 #################### NEXT STEPS: USE SESSION TO MAKE THE CONFIRMATION PAGE ###################
 
 ##############################################################################################
-
-    return render_template('tech_scout.html', title='Technology Scout', user= user, tech=tech, form=form, sectors = sectors_results, tech_name=tech_name)
 
 @app.route("/task_board_a", methods = ['GET', 'POST'])
 def task_board_a():
@@ -202,7 +208,7 @@ def task_board_a():
     if user['can_analyse'] == 0:
         flash('No access to TechAnalytics. Please contact administrators', 'danger')
         return redirect(url_for('home'))
-    # get all tech scout outcomes that needs analysis
+############ get all tech scout outcomes that needs analysis ##############
     ## NOTE: Here we query the tech_main_log table #######
     db = get_db()
     ## sqlite3 specific datetime function!!
@@ -218,6 +224,32 @@ def task_board_a():
                             order by lower(tech_name) asc''')
 
     task_result = task_cur.fetchall()
+
+########## have a list of dictionaries ###################################
+    # tech_dic= []
+    # for task in task_result:
+    #     tech = task['tech_name']
+    #     ms_cur = db.execute('''
+    #                             select ms_left.ms_name ms_name, ms.milestone_id ms_id
+    #                             from milestones ms,
+    #                                  (select distinct m.ms_name
+    #                                   from milestones m
+    #
+    #                                   except
+    #
+    #                                   select distinct milestone ms
+    #                                   from tech_story_log
+    #                                   where tech_name = ?) ms_left
+    #                             where ms_left.ms_name = ms.ms_name
+    #                             order by ms.milestone_id
+    #
+    #                            ''', [tech])
+    #     tech_ms = ms_cur.fetchall()
+    #
+    #     tech_dic_item = {'tech_name':tech, 'contributor_name':task['contributor_name'], 'scout_time':task['scout_time'], 'ms_left':[ ms_item['ms_id'] for ms_item in tech_ms ]}
+    #     tech_dic.append(tech_dic_item)
+        # pass a list of dictionaries
+##############################################################################
 
     return render_template('task_board_a.html', title='Task Board', user= user, tasks = task_result)
 
@@ -238,10 +270,10 @@ def tech_analytics(tech):
 
 ################## TEST ONLY ########################
 # use tech_story in the future
-
+# sqlite3 specific functions: substr() for substring(), || for concat()
     stories_cur = db.execute('''
                             select
-                                tsl.milestone, tsl.story_content, tsl.story_year, u.username contributor_name, datetime(tsl.contribute_time,'unixepoch') contribute_time
+                                tsl.milestone, substr(tsl.story_content, 1, 100)|| '...' story_content, tsl.story_year, u.username contributor_name, datetime(tsl.contribute_time,'unixepoch') contribute_time
                             from tech_story_log tsl, users u
                             where tsl.tech_name = ?
                             and tsl.contributor = u.user_id
@@ -251,7 +283,7 @@ def tech_analytics(tech):
 
 
     ms_cur = db.execute('''
-                            select ms_left.ms_name, ms.milestone_id
+                            select ms_left.ms_name ms_name, ms.milestone_id ms_id
                             from milestones ms,
                                  (select distinct m.ms_name
                                   from milestones m
@@ -265,12 +297,17 @@ def tech_analytics(tech):
                             order by ms.milestone_id
 
                            ''', [tech])
-    milestones = ms_cur.fetchall()
-
+    ms_left = ms_cur.fetchall()
+    ms_left_l = [row[0] for row in ms_left]
 #####################################################
 
     # form process
     form = TechAnalyticsForm()
+
+    form.milestone.choices = [('None', 'None')] + [(str(row[0]), str(row[0])) for row in ms_left]
+
+
+
     if form.validate_on_submit():
 
         # check repeat form
@@ -295,17 +332,18 @@ def tech_analytics(tech):
             flash(f'New story added', 'success')
             return redirect(url_for('tech_analytics',tech=tech))
 
-    return render_template('tech_analytics.html', title='Technology Analytics', user= user, form=form, milestones = milestones, stories = stories_results, tech=tech)
+    return render_template('tech_analytics.html', title='Technology Analytics', form=form, user= user,  milestones = milestones, ms_left = ms_left_l, stories = stories_results, tech=tech)
 
 @app.route("/task_board_e", methods = ['GET', 'POST'])
 def task_board_e():
     user = get_current_user()
     if not user:
         return redirect(url_for('login'))
-    if user['can_analyse'] == 0:
+    if user['can_edit'] == 0:
         flash('No access to TechAnalytics. Please contact administrators', 'danger')
         return redirect(url_for('home'))
-    # get all tech scout outcomes that needs analysis
+
+    # get all tech outcomes and their status
     ## NOTE: Here we query the tech_main_log table #######
     db = get_db()
     ## sqlite3 specific datetime function!!
@@ -324,17 +362,33 @@ def task_board_e():
 
     return render_template('task_board_e.html', title='Task Board', user= user, tasks = task_result)
 
-@app.route("/tech_edit", methods = ['GET', 'POST'])
-def tech_edit():
 
+
+@app.route("/show_and_edit/<tech>", methods = ['GET', 'POST'])
+def show_and_edit(tech):
+    """
+    For all users, see a form submitted by him/herself or other users. Users can only edit his/her own form and rewrite the corresponding entry in log table.
+    """
+    user = get_current_user()
+    if not user:
+        return redirect(url_for('login'))
+
+    return '<h1>Tech Edit </h1>'
+
+@app.route("/final_edit/<tech>", methods = ['GET', 'POST'])
+def final_edit(tech):
+    """
+    For editor users, see a form submitted by any user. Make modification and commit to main table.
+    """
     user = get_current_user()
     if not user:
         return redirect(url_for('login'))
     if user['can_edit'] == 0:
-        flash('No access to TechEdit. Please contact administrators', 'danger')
+        flash('No access to TechAnalytics. Please contact administrators', 'danger')
         return redirect(url_for('home'))
 
     return '<h1>Tech Edit </h1>'
+
 
 @app.route('/logout')
 def logout():

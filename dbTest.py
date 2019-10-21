@@ -5,9 +5,13 @@ import os
 ######################### database test with sqlite3 ########################
 dbpath = os.getcwd() + '/TechTrackerTemp.db'
 # database helper functions
-def connect_db():
+def connect_db(RowMode=True):
+    
     sql = sqlite3.connect(dbpath)
-    sql.row_factory = sqlite3.Row
+    if RowMode:
+        sql.row_factory = sqlite3.Row
+    else:
+        sql.row_factory = lambda cursor, row: row[0]
     return sql
 
 def get_db():

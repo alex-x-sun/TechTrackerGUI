@@ -31,18 +31,38 @@ def ToMachineReadable(char):
     """
     return char.lower().strip().replace(' ', '_')
 
+milestones_tuplist = [('none', 'None')] + [(ms, text_pretty(ms)) for ms in milestones_0]
+
 milestones = list(map(text_pretty, milestones_0))
 
+milestones = ['Inception',\
+ 'Conceptual Design',\
+ 'Prototype',\
+ 'Academic Thesis',\
+ 'Published Paper',\
+ 'Book Mention',\
+ 'University Lab',\
+ 'Private R&D',\
+ 'Patent Filed',\
+ 'Patent Issued',\
+ 'First Commercial Product',\
+ 'Competing Products Enter The Market',\
+ 'First Commercial Product Failure',\
+ 'Incorporated Into Other Technologies',\
+ 'National Standards Body',\
+ 'Regulatory Requirements',\
+ 'Word In The Dictionary']
+# df_milestones = pd.DataFrame(milestones)
+# df_milestones['milestone_id'] = df_milestones.index
+# df_milestones['milestone_name'] = df_milestones.iloc[:,0].apply(lambda x: text_pretty(x))
+#
+# df_milestones.columns = ['ma_std_name', 'milestone_id','ms_name']
+#
+# milestones = ['None'] + milestones
 
-df_milestones = pd.DataFrame(milestones)
-df_milestones['milestone_id'] = df_milestones.index
-df_milestones['milestone_name'] = df_milestones.iloc[:,0].apply(lambda x: text_pretty(x))
-
-df_milestones.columns = ['ma_std_name', 'milestone_id','ms_name']
 
 
-
-dbpath = os.getcwd() + '/TechTrackerTemp.db'
-sql = sqlite3.connect(dbpath)
-
-df_milestones.to_sql(name = 'milestones', con = sql)
+# dbpath = os.getcwd() + '/TechTrackerTemp.db'
+# sql = sqlite3.connect(dbpath)
+#
+# df_milestones.to_sql(name = 'milestones', con = sql)

@@ -110,7 +110,7 @@
                   <h5>Milestone Checklist</h5>
                   <dic class="list-group">
                     {% for ms in milestones %}
-                      <h9 class="list-group-item py-1.5 px-2">{{ ms['ms_name'] }}</h9>
+                      <h9 class="list-group-item py-1.5 px-2 list-group-item-action list-group-item-info {% if ms not in ms_left %} disabled {% endif %}">{{ ms }}</h9>
                     {% endfor %}
 
 
