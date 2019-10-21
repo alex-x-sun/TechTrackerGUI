@@ -1,15 +1,30 @@
 {% extends "layout.html" %}
+{% from "show_links.html" import show_links %}
+
+
+{% block nav %}
+{{ show_links(user) }}
+{% endblock %}
+
+
 {% block content %}
 <!-- <h1>Tech</h1> -->
+
 <div class="row" style = "margin-bottom: 15px; margin-top: 15px">
+
 	<div class="col-sm-4">
-		 <a class="nav-item nav-link" href="{{ url_for('tech_scout') }}">Technology Scout</a>
+		 <a class="list-group-item" href="{{ url_for('tech_scout') }}">Technology Scout</a>
 	</div>
+
 	<div class="col-sm-4">
-		 <a class="nav-item nav-link" href="{{ url_for('tech_analytics') }}">Technology Analytics</a>
+		 <a class="list-group-item" href="{{ url_for('task_board_a') }}">Technology Analytics</a>
 	</div>
+
 	<div class="col-sm-4">
-		 <a class="nav-item nav-link" href="{{ url_for('tech_edit') }}">Technology Edit</a>
+		 <a class="list-group-item" href="{{ url_for('task_board_e') }}">Technology Edit</a>
 	</div>
 </div>
+
+
+
 {% endblock content %}

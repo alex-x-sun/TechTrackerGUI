@@ -1,0 +1,160 @@
+{% extends "layout.html" %}
+{% from "show_links.html" import show_links %}
+
+{% block nav %}
+{{ show_links(user) }}
+{% endblock %}
+
+{% block content %}
+
+<h1>Technology Analytics: {{ tech }}</h1>
+<h5>Deepdive into technologies we have. Find stories and milestones.</h5>
+<div class="container">
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+        {{ form.csrf_token }}
+        <div class="row" style = "margin-bottom: 15px; margin-top: 15px">
+
+            <div class="col-sm-6">
+                <!-- <form method="POST" action=""> -->
+                    <div class="content-section">
+                      <div class = "row">
+
+                      <div class = "col-sm">
+                        <div class="form-group">
+                                <b>{{ form.story_year.label(class="form-control-label") }}</b>
+                                {% if form.story_year.errors %}
+                                    {{ form.story_year(class="form-control form-control-lg is-invalid") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.story_year.errors %}
+                                            <span>{{ error }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.story_year(class="form-control form-control-lg") }}
+                                {% endif %}
+
+                        </div>
+                      </div>
+                      <div class = "col-sm">
+                        <div class="form-group">
+                                <b>{{ form.story_date.label(class="form-control-label") }}</b>
+                                {% if form.story_date.errors %}
+                                    {{ form.story_date(class="form-control form-control-lg is-invalid") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.story_date.errors %}
+                                            <span>{{ error }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.story_date(class="form-control form-control-lg") }}
+                                {% endif %}
+                        </div>
+                      </div>
+                      </div>
+                        <div class="form-group">
+                                <b>{{ form.milestone.label(class="form-control-label") }}</b>
+                                <p><small><font color="grey">Is this a milestone story? Input "None" if not.</font></small></p>
+                                {% if form.milestone.errors %}
+                                    {{ form.milestone(class="form-control form-control-lg is-invalid") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.milestone.errors %}
+                                            <span>{{ error }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.milestone(class="form-control form-control-lg") }}
+                                {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                                <b>{{ form.story_content.label(class="form-control-label") }}</b>
+                                <p><small><font color="grey">The content of the story.</font></small></p>
+                                {% if form.story_content.errors %}
+                                    {{ form.story_content(class="form-control form-control-lg is-invalid") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.story_content.errors %}
+                                            <span>{{ error }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.story_content(class="form-control form-control-lg") }}
+                                {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                                <b>{{ form.sources.label(class="form-control-label") }}</b>
+                                <p><small><font color="grey">Use ";" to split multi sources, less than 3 sources preferred.</font></small></p>
+                                {% if form.sources.errors %}
+                                    {{ form.sources(class="form-control form-control-lg is-invalid") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.sources.errors %}
+                                            <span>{{ error }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.sources(class="form-control form-control-lg") }}
+                                {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {{ form.submit(class="btn btn-outline-info") }}
+                        </div>
+
+                    </div>
+                <!-- </form> -->
+            </div>
+            <div class="col-sm-4">
+                <!-- <form method="POST" action=""> -->
+                <div class="row" style = "margin-bottom: 15px; margin-top: 15px">
+                  <h5>Milestone Checklist</h5>
+                  <dic class="list-group">
+                    {% for ms in milestones %}
+                      <h9 class="list-group-item py-1.5 px-2">{{ ms['ms_name'] }}</h9>
+                    {% endfor %}
+
+
+                  </div>
+                </div>
+
+                <div>
+                <h5>Current Progress</h5>
+                <table id="example" class="table table-responsive-sm" >
+                  <thead>
+                      <tr>
+
+                          <th>Year</th>
+                          <th>Story Content</th>
+                          <th>Milestone</th>
+                          <th>Contributor</th>
+                          <th>Submit Time</th>
+                      </tr>
+                  </thead>
+                  {% for story in stories %}
+                  <tbody>
+                      <tr>
+
+
+                          <td>{{ story['story_year'] }}</td>
+                          <td>{{ story['story_content'] }}</td>
+                          <td>{{ story['milestone'] }}</td>
+                          <td>{{ story['contributor_name'] }}</td>
+                          <td>{{ story['contribute_time'] }}</td>
+                      </tr>
+                  </tbody>
+                  {% endfor %}
+                </div>
+
+
+
+
+
+            </div>
+
+
+        </div>
+
+    </form>
+</div>
+
+{% endblock content %}

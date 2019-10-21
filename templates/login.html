@@ -1,5 +1,13 @@
 {% extends "layout.html" %}
+{% from "show_links.html" import show_links %}
+
+{% block nav %}
+{{ show_links(user) }}
+{% endblock %}
+
+
 {% block content %}
+
     <div class="content-section">
         <form method="POST" action="">
             {{ form.hidden_tag() }}

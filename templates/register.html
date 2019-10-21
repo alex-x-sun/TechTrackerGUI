@@ -1,13 +1,19 @@
 {% extends "layout.html" %}
+{% from "show_links.html" import show_links %}
+
+{% block nav %}
+{{ show_links(user) }}
+{% endblock %}
+
 {% block content %}
     <div class="content-section">
         <form method="POST" action="">
             {{ form.hidden_tag() }}
             <fieldset class="form-group">
-                <legend class="border-bottom mb-4">Join Today</legend>
+                <legend class="border-bottom mb-4">Join MIT TechTracker</legend>
+
                 <div class="form-group">
                     {{ form.username.label(class="form-control-label") }}
-
                     {% if form.username.errors %}
                         {{ form.username(class="form-control form-control-lg is-invalid") }}
                         <div class="invalid-feedback">
@@ -19,6 +25,7 @@
                         {{ form.username(class="form-control form-control-lg") }}
                     {% endif %}
                 </div>
+
                 <div class="form-group">
                     {{ form.email.label(class="form-control-label") }}
                     {% if form.email.errors %}

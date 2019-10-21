@@ -1,11 +1,18 @@
 {% extends "layout.html" %}
+{% from "show_links.html" import show_links %}
+
+{% block nav %}
+{{ show_links(user) }}
+{% endblock %}
+
 {% block content %}
 <h1>Technology Scout</h1>
-<h5>Finding new technologies, add basic information, and explore embedded technologies.</h5>
+<h6>Finding new technologies, add basic information, and explore embedded technologies.</h6>
 
 <div class="container">
     <form method="POST" action="">
         {{ form.hidden_tag() }}
+        {{ form.csrf_token }}
         <div class="row" style = "margin-bottom: 15px; margin-top: 15px">
             <div class="col-sm-6">
                 <!-- <form method="POST" action=""> -->
@@ -38,6 +45,22 @@
                                     {{ form.associate_names(class="form-control form-control-lg") }}
                                 {% endif %}
                         </div>
+
+                        <div class="form-group">
+                                <b>{{ form.wikilink.label(class="form-control-label") }}</b>
+                                <p><small><font color="grey">Wikipedia link of the technology.</font></small></p>
+                                {% if form.wikilink.errors %}
+                                    {{ form.wikilink(class="form-control form-control-lg is-invalid") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.wikilink.errors %}
+                                            <span>{{ error }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.wikilink(class="form-control form-control-lg") }}
+                                {% endif %}
+                        </div>
+
                         <div class="form-group">
                                 <b>{{ form.category.label(class="form-control-label") }}</b>
                                 <p>{{form.category}}</p>
@@ -97,16 +120,7 @@
 
                         <div>
                             <p><b>Impact Sectors*</b></p>
-                            <!-- <p><small>Land Selection<input type="checkbox" value="land selection" name="mycheckbox"></small>
-                            <small>Design<input type="checkbox" value="design" name="mycheckbox"></small>
-                            <small>Leasing and Brokerage<input type="checkbox" value="leasing and brokerage" name="mycheckbox"></small></p>
-                            <p><small>Entitlement<input type="checkbox" value="entitlement" name="mycheckbox"></small>
-                            <small>Capital Stock<input type="checkbox" value="capital stock" name="mycheckbox"></small>
-                            <small>Acquisition and Disposition<input type="checkbox" value="acquisition and disposition" name="mycheckbox"></small></p>
-                            <p><small>Construction<input type="checkbox" value="construction" name="mycheckbox"></small>
-                            <small>Demolition<input type="checkbox" value="demolition" name="mycheckbox"></small>
-                            <small>Redevelopment<input type="checkbox" value="redevelopment" name="mycheckbox"></small></p>
-                            <small>Asset Operations and Monitoring<input type="checkbox" value="asset operations and monitoring" name="mycheckbox"></small> -->
+
                             {% for s in sectors %}
                             <p><small>{{ s['sector'] }}<input type="checkbox" value="{{ s['sec_id'] }}" name="mycheckbox"></small></p>
                             {% endfor %}
@@ -130,11 +144,23 @@
                         </div>
                     </div>
                 <!-- </form> -->
+                <div>
+
+                  <div class= "col">
+                    <div class= "row" style = "margin-bottom: 10px">
+                      {{ form.submit(class="btn btn-outline-info")}}
+                    </div>
+
+                    <div class= "row" style = "margin-bottom: 10px; margin-top: 10px;">
+                      <a href="{% if tech_name %}{{ url_for('tech_analytics', tech=tech_name) }}{% endif %}" role="button"  class="btn btn-outline-info {% if user['can_analyse'] == 0 or not tech_name%}  disabled {% endif %} ">Proceed to Analytics</a>
+                    </div>
+
+
+                  </div>
             </div>
         </div>
-        <div class="form-group">
-            {{ form.submit(class="btn btn-outline-info") }}
-        </div>
+
+
     </form>
 </div>
 
