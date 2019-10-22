@@ -17,7 +17,7 @@ from dbTest import connect_db,  get_db
 # ipython3 kernelspec install-self
 
 # for milestone string process
-from milestones import milestones
+from milestones import milestones, milestones_tuplist
 
 
 ###############################################################################
@@ -225,32 +225,6 @@ def task_board_a():
 
     task_result = task_cur.fetchall()
 
-########## have a list of dictionaries ###################################
-    # tech_dic= []
-    # for task in task_result:
-    #     tech = task['tech_name']
-    #     ms_cur = db.execute('''
-    #                             select ms_left.ms_name ms_name, ms.milestone_id ms_id
-    #                             from milestones ms,
-    #                                  (select distinct m.ms_name
-    #                                   from milestones m
-    #
-    #                                   except
-    #
-    #                                   select distinct milestone ms
-    #                                   from tech_story_log
-    #                                   where tech_name = ?) ms_left
-    #                             where ms_left.ms_name = ms.ms_name
-    #                             order by ms.milestone_id
-    #
-    #                            ''', [tech])
-    #     tech_ms = ms_cur.fetchall()
-    #
-    #     tech_dic_item = {'tech_name':tech, 'contributor_name':task['contributor_name'], 'scout_time':task['scout_time'], 'ms_left':[ ms_item['ms_id'] for ms_item in tech_ms ]}
-    #     tech_dic.append(tech_dic_item)
-        # pass a list of dictionaries
-##############################################################################
-
     return render_template('task_board_a.html', title='Task Board', user= user, tasks = task_result)
 
 
@@ -273,11 +247,13 @@ def tech_analytics(tech):
 # sqlite3 specific functions: substr() for substring(), || for concat()
     stories_cur = db.execute('''
                             select
-                                tsl.milestone, substr(tsl.story_content, 1, 100)|| '...' story_content, tsl.story_year, u.username contributor_name, datetime(tsl.contribute_time,'unixepoch') contribute_time
-                            from tech_story_log tsl, users u
+                                tsl.milestone, substr(tsl.story_content, 1, 100)|| '...' story_content, tsl.story_year, tsl.contributor contributor_id, u.username contributor_name, datetime(tsl.contribute_time,'unixepoch') contribute_time
+                            from tech_story_log tsl, users u, milestones m
                             where tsl.tech_name = ?
                             and tsl.contributor = u.user_id
-                            order by tsl.story_year
+                            and tsl.milestone = m.ms_name
+                            order by tsl.story_year asc, m.milestone_id
+
                             ''', [tech])
     stories_results = stories_cur.fetchall()
 
@@ -300,39 +276,43 @@ def tech_analytics(tech):
     ms_left = ms_cur.fetchall()
     ms_left_l = [row[0] for row in ms_left]
 #####################################################
-
-    # form process
     form = TechAnalyticsForm()
 
-    form.milestone.choices = [('None', 'None')] + [(str(row[0]), str(row[0])) for row in ms_left]
+    if request.method == 'POST':
+        # form process
+
+        # dynamic selection
+        # form.milestone.choices = [('None', 'None')] + [(str(row[0]), str(row[0])) for row in ms_left]
+
+        form.milestone.choices = milestones_tuplist
 
 
 
-    if form.validate_on_submit():
+        if form.validate_on_submit():
 
-        # check repeat form
-        existing_ms_cur = db.execute('''
-                                    select log_s_id
-                                    from tech_story_log
-                                    where story_content = ?
-                                    and contributor = ?
-                                    ''', [form.story_content.data, user['user_id']])
-        existing_ms = existing_ms_cur.fetchone()
+            # check repeat form
+            existing_ms_cur = db.execute('''
+                                        select log_s_id
+                                        from tech_story_log
+                                        where story_content = ?
+                                        and contributor = ?
+                                        ''', [form.story_content.data, user['user_id']])
+            existing_ms = existing_ms_cur.fetchone()
 
-        if existing_ms:
-            flash('You have already submitted this story', 'danger')
-        else:
-            # commit changes
-            db.execute('''insert into tech_story_log
-                            (contributor, tech_name, contribute_time, story_year, story_date, story_content, milestone, source)
-                          values (?, ?, ?, ?, ?, ?, ?, ?)''', [user['user_id'], tech, datetime.timestamp(datetime.now()), form.story_year.data, form.story_date.data, form.story_content.data, form.milestone.data,  form.sources.data])
+            if existing_ms:
+                flash('You have already submitted this story', 'danger')
+            else:
+                # commit changes
+                db.execute('''insert into tech_story_log
+                                (contributor, tech_name, contribute_time, story_year, story_date, story_content, milestone, source)
+                              values (?, ?, ?, ?, ?, ?, ?, ?)''', [user['user_id'], tech, datetime.timestamp(datetime.now()), form.story_year.data, form.story_date.data, form.story_content.data, form.milestone.data,  form.sources.data])
 
-            # we might need some cleaner functions here
-            db.commit()
-            flash(f'New story added', 'success')
-            return redirect(url_for('tech_analytics',tech=tech))
+                # we might need some cleaner functions here
+                db.commit()
+                flash(f'New story added', 'success')
+                return redirect(url_for('tech_analytics',tech=tech))
 
-    return render_template('tech_analytics.html', title='Technology Analytics', form=form, user= user,  milestones = milestones, ms_left = ms_left_l, stories = stories_results, tech=tech)
+    return render_template('tech_analytics.html', title='Technology Analytics', form=form, user= user,  milestones = milestones[:-1], ms_left = ms_left_l, stories = stories_results, tech=tech)
 
 @app.route("/task_board_e", methods = ['GET', 'POST'])
 def task_board_e():
@@ -347,16 +327,23 @@ def task_board_e():
     ## NOTE: Here we query the tech_main_log table #######
     db = get_db()
     ## sqlite3 specific datetime function!!
-    task_cur = db.execute('''select
+    task_cur = db.execute('''
+                            select
                                 tml.tech_name tech_name,
-                                datetime(tml.scout_time,'unixepoch') scout_time,
-                                u.username contributor_name
-                            from tech_main_log tml, users u
-                            where tml.tech_name in
-                                (select distinct tech_name from tech_main_log)
-                            and tml.contributor = u.user_id
-                            group by tech_name
-                            order by lower(tech_name) asc''')
+                                tml.scout_count scout_count,
+                                tsl.story_count story_count,
+                                tsl.latest_commit latest_commit
+                            from
+                                (select distinct tech_name, count(*) scout_count
+                                 from tech_main_log
+                                 group by tech_name) tml,
+                                (select distinct tech_name, count(*) story_count, max(datetime(contribute_time,'unixepoch')) latest_commit
+                                 from tech_story_log
+                                 group by tech_name) tsl
+                            where
+                                tml.tech_name = tsl.tech_name
+                            order by lower(tml.tech_name) asc
+                         ''')
 
     task_result = task_cur.fetchall()
 
@@ -364,16 +351,31 @@ def task_board_e():
 
 
 
-@app.route("/show_and_edit/<tech>", methods = ['GET', 'POST'])
-def show_and_edit(tech):
+@app.route("/log_edit/<tech>", methods = ['GET', 'POST'])
+def log_edit(tech, goal = 'view'):
     """
     For all users, see a form submitted by him/herself or other users. Users can only edit his/her own form and rewrite the corresponding entry in log table.
     """
     user = get_current_user()
     if not user:
         return redirect(url_for('login'))
+    if user['can_analyse'] == 0:
+        flash('No access to TechAnalytics. Please contact administrators', 'danger')
+        return redirect(url_for('home'))
 
-    return '<h1>Tech Edit </h1>'
+    db = get_db()
+
+    if goal ==  "view":
+        return render_template('view_log.html', title='View Tech Story', user= user, tech = tech)
+    elif goal == "edit":
+        # form process
+        form = TechAnalyticsForm()
+
+        # if form.validate_on_submit():
+        #     db.execute()
+    else:
+        flash('You have no access to this log.', 'danger')
+
 
 @app.route("/final_edit/<tech>", methods = ['GET', 'POST'])
 def final_edit(tech):
@@ -387,7 +389,7 @@ def final_edit(tech):
         flash('No access to TechAnalytics. Please contact administrators', 'danger')
         return redirect(url_for('home'))
 
-    return '<h1>Tech Edit </h1>'
+    return '<h1> Final Edit </h1>'
 
 
 @app.route('/logout')

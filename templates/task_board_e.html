@@ -7,7 +7,35 @@
 
 {% block content %}
 
-<div class="row">
+<h5>Current Progress</h5>
+<table id="example" class="table table-responsive-sm" >
+  <thead>
+      <tr>
+
+          <th>Technology</th>
+          <th>Scout Count</th>
+          <th>Story Count</th>
+          <th>Latest Commit</th>
+          <th> </th>
+      </tr>
+  </thead>
+  {% for task in tasks %}
+  <tbody>
+      <tr>
+          <td>{{ task['tech_name'] }}</td>
+          <td>{{ task['scout_count'] }}</td>
+          <td>{{ task['story_count'] }}</td>
+          <td>{{ task['latest_commit'] }}</td>
+          <td>
+            <a href = "{{ url_for('final_edit', tech=task['tech_name']) }}" role="button"  class="btn btn-outline-info">Edit</a>
+          </td>
+      </tr>
+  </tbody>
+  {% endfor %}
+</table>
+</div>
+
+<!-- <div class="row">
         <div class="col-lg-12">
           <div class="list-group">
             {% if tasks %}
@@ -23,6 +51,6 @@
             {% endif %}
           </div>
         </div><!-- /.col-lg-12 -->
-      </div>
+
 
 {% endblock %}

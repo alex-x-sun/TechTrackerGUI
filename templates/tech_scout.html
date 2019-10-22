@@ -152,7 +152,7 @@
                     </div>
 
                     <div class= "row" style = "margin-bottom: 10px; margin-top: 10px;">
-                      <a href="{% if tech_name %}{{ url_for('tech_analytics', tech=tech_name) }}{% endif %}" role="button"  class="btn btn-outline-info {% if user['can_analyse'] == 0 or not tech_name%}  disabled {% endif %} ">Proceed to Analytics</a>
+                      <a href="{% if tech_name %}{{ url_for('tech_analytics', tech=tech_name) }}{% endif %}" role="button"  class="btn  {% if user['can_analyse'] == 0 or not tech_name%}  btn-outline-secondary disabled {% else %} btn-outline-info {% endif %} ">Proceed to Analytics</a>
                     </div>
 
 

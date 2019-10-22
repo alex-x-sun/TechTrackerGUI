@@ -104,55 +104,7 @@
                     </div>
                 <!-- </form> -->
             </div>
-            <div class="col-sm-4">
-                <!-- <form method="POST" action=""> -->
-                <div class="row" style = "margin-bottom: 15px; margin-top: 15px">
-                  <h5>Milestone Checklist</h5>
-                  <dic class="list-group">
-                    {% for ms in milestones %}
-                      <h9 class="list-group-item py-1.5 px-2  {% if ms in ms_left %} list-group-item-action {% else %} list-group-item-success {% endif %}">{{ ms }}</h9>
-                    {% endfor %}
-
-
-                  </div>
-                </div>
-
-                <div>
-                <h5>Current Progress</h5>
-                <table id="example" class="table table-responsive-sm" >
-                  <thead>
-                      <tr>
-
-                          <th>Year</th>
-                          <th>Story Content</th>
-                          <th>Milestone</th>
-                          <th>Contributor</th>
-                          <th>Submit Time</th>
-                          <th> </th>
-                          <th> </th>
-                      </tr>
-                  </thead>
-                  {% for story in stories %}
-                  <tbody>
-                      <tr>
-
-
-                          <td>{{ story['story_year'] }}</td>
-                          <td>{{ story['story_content'] }}</td>
-                          <td>{{ story['milestone'] }}</td>
-                          <td>{{ story['contributor_name'] }}</td>
-                          <td>{{ story['contribute_time'] }}</td>
-                          <td>
-                            <a href = "{{ url_for('log_edit', tech=tech) }}" role="button"  class="btn btn-outline-info ">View</a>
-                          </td>
-                          <td>
-                            <a href = "{{ url_for('log_edit', tech=tech) }}" role="button"  class="btn {% if story['contributor_id'] == user['user_id'] %} btn-outline-info {% else %} btn-outline-secondary disabled {% endif %}">Edit</a>
-                          </td>
-                      </tr>
-                  </tbody>
-                  {% endfor %}
-                </table>
-                </div>
+            
 
 
 

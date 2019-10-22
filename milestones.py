@@ -20,7 +20,8 @@ milestones_0 = ['inception',\
  'incorporated_into_other_technologies',\
  'national_standards_body',\
  'regulatory_requirements',\
- 'word_in_the_dictionary']
+ 'word_in_the_dictionary',\
+ 'none']
 
 def text_pretty(varchar):
     return varchar.replace('_', ' ').title()
@@ -31,7 +32,9 @@ def ToMachineReadable(char):
     """
     return char.lower().strip().replace(' ', '_')
 
-milestones_tuplist = [('none', 'None')] + [(ms, text_pretty(ms)) for ms in milestones_0]
+milestones_tuplist = [('None', 'None')] + [(text_pretty(ms), text_pretty(ms)) for ms in milestones_0[:-1]]
+
+
 
 milestones = list(map(text_pretty, milestones_0))
 
@@ -51,18 +54,19 @@ milestones = ['Inception',\
  'Incorporated Into Other Technologies',\
  'National Standards Body',\
  'Regulatory Requirements',\
- 'Word In The Dictionary']
-# df_milestones = pd.DataFrame(milestones)
+ 'Word In The Dictionary',\
+ 'None']
+# df_milestones = pd.DataFrame(milestones_0)
 # df_milestones['milestone_id'] = df_milestones.index
 # df_milestones['milestone_name'] = df_milestones.iloc[:,0].apply(lambda x: text_pretty(x))
-#
+# #
 # df_milestones.columns = ['ma_std_name', 'milestone_id','ms_name']
-#
+# #
 # milestones = ['None'] + milestones
-
-
-
+#
+# df_milestones
+#
 # dbpath = os.getcwd() + '/TechTrackerTemp.db'
 # sql = sqlite3.connect(dbpath)
-#
+# #
 # df_milestones.to_sql(name = 'milestones', con = sql)

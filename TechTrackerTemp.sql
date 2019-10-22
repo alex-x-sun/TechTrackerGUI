@@ -75,7 +75,9 @@ CREATE TABLE impacted_sector_order (
   sector text
 );
 
-CREATE TABLE milestone_order (
-  milestone_id integer PRIMARY KEY,
-  milestone_name text
-);
+CREATE TABLE "milestones" (
+ "index" INTEGER,
+  "ma_std_name" TEXT,
+  "milestone_id" INTEGER,
+  "ms_name" TEXT
+)

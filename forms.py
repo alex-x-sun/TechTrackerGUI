@@ -54,7 +54,7 @@ class TechAnalyticsForm(FlaskForm):
     milestone = SelectField('Milestone*', choices = [])
 
 
-    story_content = TextAreaField('Story Content*')
+    story_content = TextAreaField('Story Content*',render_kw={"rows": 12})
     sources = TextAreaField('Sources*', render_kw={"rows": 3})
 
     submit = SubmitField('Submit')
