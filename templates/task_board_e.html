@@ -8,14 +8,16 @@
 {% block content %}
 
 <h5>Current Progress</h5>
-<table id="example" class="table table-responsive-sm" >
+<div class="table-responsive-sm">
+<table id="example" class="table table-hover" >
   <thead>
       <tr>
 
           <th>Technology</th>
-          <th>Scout Count</th>
           <th>Story Count</th>
-          <th>Latest Commit</th>
+          <th>Latest Scout</th>
+          <th>Latest Story</th>
+          <th> </th>
           <th> </th>
       </tr>
   </thead>
@@ -23,11 +25,14 @@
   <tbody>
       <tr>
           <td>{{ task['tech_name'] }}</td>
-          <td>{{ task['scout_count'] }}</td>
           <td>{{ task['story_count'] }}</td>
+          <td>{{ task['latest_scout'] }}</td>
           <td>{{ task['latest_commit'] }}</td>
           <td>
-            <a href = "{{ url_for('final_edit', tech=task['tech_name']) }}" role="button"  class="btn btn-outline-info">Edit</a>
+            <a href = "{{ url_for('final_edit_scout', tech=task['tech_name']) }}" role="button"  class="btn btn-outline-info">Edit Scout</a>
+          </td>
+          <td>
+            <a href = "{{ url_for('view_all_stories', tech=task['tech_name']) }}" role="button"  class="btn btn-outline-info">Edit Analytics & Stories</a>
           </td>
       </tr>
   </tbody>

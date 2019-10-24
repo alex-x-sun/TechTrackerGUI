@@ -1,5 +1,5 @@
 from flask import Flask, render_template, url_for, flash, redirect, request, g, session, request
-from forms import RegistrationForm, LoginForm, TechScoutForm, TechAnalyticsForm
+from forms import RegistrationForm, LoginForm, TechScoutForm, TechAnalyticsForm, EditTechStoryForm
 from wtforms import TextField, IntegerField, TextAreaField, SubmitField, RadioField,SelectField
 from wtforms import validators, ValidationError
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
@@ -40,7 +40,7 @@ posts = [
 ]
 
 
-############ user login control #################################################
+############ helper functions #################################################
 def get_current_user():
     user_result = None
 
@@ -53,6 +53,48 @@ def get_current_user():
 
     return user_result
 
+def repeat_scout_checker(form, mode = 'scout_only'):
+    db = get_db()
+
+    # check repeat form
+    if mode == 'scout_only':
+        existing_sc_cur = db.execute('''
+                                    select log_id
+                                    from tech_main_log
+                                    where tech_name = ?
+                                    ''', [form.tech_name.data])
+        existing_sc = existing_sc_cur.fetchone()
+    elif mode == 'full_check':
+        existing_sc_cur = db.execute('''
+                                    select log_id
+                                    from tech_main_log
+                                    where tech_name = ?
+                                    and description = ?
+                                    and impact = ?
+
+                                    and asso_names = ?
+                                    and emb_techs = ?
+                                    and category = ?
+                                    and desc_source = ?
+                                    ''', [form.tech_name.data, form.description.data, form.impact.data, form.associate_names.data, form.embed_tech.data, form.category.data, form.sources.data])
+        existing_sc = existing_sc_cur.fetchone()
+
+    return existing_sc
+
+def repeat_story_checker(form):
+    db = get_db()
+    # check repeat form
+    existing_ms_cur = db.execute('''
+                                select log_s_id
+                                from tech_story_log
+                                where story_year = ?
+                                and story_date = ?
+                                and milestone = ?
+                                and story_content = ?
+                                and sources = ?
+                                ''', [form.story_year.data, form.story_date.data, form.milestone.data, form.story_content.data, form.sources.data])
+    existing_ms = existing_ms_cur.fetchone()
+    return existing_ms
 
 #################################################################################
 
@@ -167,25 +209,23 @@ def tech_scout():
 
 
         if form.validate_on_submit():
-            # if tech:
-            #     tech_name = tech
-            # else:
-            #     tech_name = form.tech_name.data
 
-            tech_name = form.tech_name.data
+            if repeat_scout_checker(form):
+                flash(f'Scout field: The Technology {form.tech_name.data} already exists. Please check.', 'danger')
+            else:
+                db.execute('''
+                            insert into tech_main_log
+                                (contributor, tech_name, scout_time, description, impact, desc_source, asso_names, impa_sector, emb_techs, wiki_link, category)
+                            values
+                                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ''', [user['user_id'], form.tech_name.data, datetime.timestamp(datetime.now()), form.description.data, form.impact.data, form.sources.data, form.associate_names.data, ';'.join(checkbox), form.embed_tech.data, form.wikilink.data, form.category.data])
 
-            db.execute('insert into tech_main_log (contributor, tech_name, scout_time, description, impact, desc_source, asso_names, impa_sector, emb_techs, wiki_link, category) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [user['user_id'], tech_name, datetime.timestamp(datetime.now()), form.description.data, form.impact.data, form.sources.data, form.associate_names.data, ';'.join(checkbox), form.embed_tech.data, form.wikilink.data, form.category.data])
-
-            # we might need some cleaner functions here
-            db.commit()
-            flash(f'Technology {form.tech_name.data} added', 'success')
-
-
-
-
+                # we might need some cleaner functions here
+                db.commit()
+                flash(f'Technology {form.tech_name.data} added', 'success')
 
         else:
-            flash(form.errors if len(form.errors)!= 0 else 'select Impact Sectors', 'danger') #spits out any and all errors**
+            flash(form.errors if len(form.errors)!= 0 else 'Select Impact Sectors', 'danger') #spits out any and all errors**
         # if form.validate_on_submit():
         #     print('yea')
         #     flash(f'Technology {form.tech_name.data} added')
@@ -213,6 +253,7 @@ def task_board_a():
     db = get_db()
     ## sqlite3 specific datetime function!!
     task_cur = db.execute('''select
+                                tml.log_id log_id,
                                 tml.tech_name tech_name,
                                 datetime(tml.scout_time,'unixepoch') scout_time,
                                 u.username contributor_name
@@ -247,7 +288,11 @@ def tech_analytics(tech):
 # sqlite3 specific functions: substr() for substring(), || for concat()
     stories_cur = db.execute('''
                             select
-                                tsl.milestone, substr(tsl.story_content, 1, 100)|| '...' story_content, tsl.story_year, tsl.contributor contributor_id, u.username contributor_name, datetime(tsl.contribute_time,'unixepoch') contribute_time
+                                tsl.log_s_id log_s_id,
+                                tsl.milestone,
+                                substr(tsl.story_content, 1, 100)|| '...' story_content, tsl.story_year,
+                                tsl.contributor contributor_id,
+                                u.username contributor_name, datetime(tsl.contribute_time,'unixepoch') contribute_time
                             from tech_story_log tsl, users u, milestones m
                             where tsl.tech_name = ?
                             and tsl.contributor = u.user_id
@@ -277,6 +322,7 @@ def tech_analytics(tech):
     ms_left_l = [row[0] for row in ms_left]
 #####################################################
     form = TechAnalyticsForm()
+    form.milestone.choices = milestones_tuplist
 
     if request.method == 'POST':
         # form process
@@ -284,12 +330,8 @@ def tech_analytics(tech):
         # dynamic selection
         # form.milestone.choices = [('None', 'None')] + [(str(row[0]), str(row[0])) for row in ms_left]
 
-        form.milestone.choices = milestones_tuplist
-
-
 
         if form.validate_on_submit():
-
             # check repeat form
             existing_ms_cur = db.execute('''
                                         select log_s_id
@@ -304,7 +346,7 @@ def tech_analytics(tech):
             else:
                 # commit changes
                 db.execute('''insert into tech_story_log
-                                (contributor, tech_name, contribute_time, story_year, story_date, story_content, milestone, source)
+                                (contributor, tech_name, contribute_time, story_year, story_date, story_content, milestone, sources)
                               values (?, ?, ?, ?, ?, ?, ?, ?)''', [user['user_id'], tech, datetime.timestamp(datetime.now()), form.story_year.data, form.story_date.data, form.story_content.data, form.milestone.data,  form.sources.data])
 
                 # we might need some cleaner functions here
@@ -331,17 +373,20 @@ def task_board_e():
                             select
                                 tml.tech_name tech_name,
                                 tml.scout_count scout_count,
+                                tml.latest_scout,
                                 tsl.story_count story_count,
                                 tsl.latest_commit latest_commit
                             from
-                                (select distinct tech_name, count(*) scout_count
+                                (select distinct tech_name, count(*) scout_count,
+                                max(datetime(scout_time,'unixepoch')) latest_scout
                                  from tech_main_log
-                                 group by tech_name) tml,
+                                 group by tech_name) tml left join
                                 (select distinct tech_name, count(*) story_count, max(datetime(contribute_time,'unixepoch')) latest_commit
                                  from tech_story_log
                                  group by tech_name) tsl
-                            where
-                                tml.tech_name = tsl.tech_name
+
+                                on tml.tech_name = tsl.tech_name
+
                             order by lower(tml.tech_name) asc
                          ''')
 
@@ -351,8 +396,8 @@ def task_board_e():
 
 
 
-@app.route("/log_edit/<tech>", methods = ['GET', 'POST'])
-def log_edit(tech, goal = 'view'):
+@app.route("/view_log/<log_s_id>", methods = ['GET', 'POST'])
+def view_log(log_s_id):
     """
     For all users, see a form submitted by him/herself or other users. Users can only edit his/her own form and rewrite the corresponding entry in log table.
     """
@@ -364,24 +409,89 @@ def log_edit(tech, goal = 'view'):
         return redirect(url_for('home'))
 
     db = get_db()
+    story_cur = db.execute('''
+                            select *
+                            from tech_story_log tsl join users
+                            on contributor = user_id
+                            where log_s_id = ?
+                            ''', [log_s_id])
+    story = story_cur.fetchone()
 
-    if goal ==  "view":
-        return render_template('view_log.html', title='View Tech Story', user= user, tech = tech)
-    elif goal == "edit":
-        # form process
-        form = TechAnalyticsForm()
+    return render_template('view_log.html', title='View Tech Story', user = user, story = story)
 
-        # if form.validate_on_submit():
-        #     db.execute()
-    else:
-        flash('You have no access to this log.', 'danger')
-
-
-@app.route("/final_edit/<tech>", methods = ['GET', 'POST'])
-def final_edit(tech):
+@app.route("/edit_log/<log_s_id>", methods = ['GET', 'POST'])
+def edit_log(log_s_id):
     """
-    For editor users, see a form submitted by any user. Make modification and commit to main table.
+    For all users, see a form submitted by him/herself or other users. Users can only edit his/her own form and rewrite the corresponding entry in log table.
     """
+    user = get_current_user()
+    if not user:
+        return redirect(url_for('login'))
+    if user['can_analyse'] == 0:
+        flash('No access to TechAnalytics. Please contact administrators', 'danger')
+        return redirect(url_for('home'))
+
+    # get the log that will be edited
+    db = get_db()
+    story_cur = db.execute('''
+                            select *, datetime(contribute_time,'unixepoch') contribute_time_dt
+                            from tech_story_log tsl join users
+                            on contributor = user_id
+                            where log_s_id = ?
+                            ''', [log_s_id])
+    story = story_cur.fetchone()
+
+    tech = story['tech_name']
+
+    form = EditTechStoryForm()
+    form.milestone.choices = milestones_tuplist
+
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            if repeat_story_checker(form):
+                flash(f'Edit field: please do not submit repeated content', 'danger')
+            else:
+                # commit changes
+                db.execute('''update tech_story_log
+                              set contributor = ?, contribute_time = ?, story_year = ?, story_date = ?, story_content = ?, milestone = ?, sources = ?
+                              where log_s_id = ?''', (user['user_id'], datetime.timestamp(datetime.now()), form.story_year.data, form.story_date.data, form.story_content.data, form.milestone.data,  form.sources.data, log_s_id))
+
+                # we might need some cleaner functions here
+                db.commit()
+                flash(f'Tech Story Updated', 'success')
+                return redirect(url_for('tech_analytics',tech=tech))
+
+
+    return render_template('edit_log.html', title='View Tech Story', form = form, user = user, story = story)
+
+@app.route("/view_scout/<log_id>", methods = ['GET', 'POST'])
+def view_scout(log_id):
+    user = get_current_user()
+    if not user:
+        return redirect(url_for('login'))
+
+    db = get_db()
+    scout_cur = db.execute('''
+                            select *, datetime(scout_time,'unixepoch') scout_time_dt
+                            from tech_main_log join users
+                            on contributor = user_id
+                            where log_id = ?
+                            ''', [log_id])
+    scout = scout_cur.fetchone()
+
+    b = tuple(map(int, scout['impa_sector'].split(';'))) if len(scout['impa_sector']) >1 else '('+str(scout['impa_sector']) + ')'
+
+    sectors_sql = 'select sector from impacted_sector_order where sec_id in ' + str(b)
+
+    sectors_cur = db.execute(sectors_sql)
+    sectors = sectors_cur.fetchall()
+
+    return render_template('view_scout.html', title='View Tech Scout', user = user, scout = scout, sectors = sectors)
+
+###### Merge this function/route with the previous one in the future ############
+@app.route("/edit_scout/<log_id>", methods = ['GET', 'POST'])
+def edit_scout(log_id):
+
     user = get_current_user()
     if not user:
         return redirect(url_for('login'))
@@ -389,8 +499,192 @@ def final_edit(tech):
         flash('No access to TechAnalytics. Please contact administrators', 'danger')
         return redirect(url_for('home'))
 
-    return '<h1> Final Edit </h1>'
+    ##### get the scout that will be edited ######################################
+    db = get_db()
+    scout_cur = db.execute('''
+                            select *, datetime(scout_time,'unixepoch') scout_time_dt
+                            from tech_main_log join users
+                            on contributor = user_id
+                            where log_id = ?
+                            ''', [log_id])
+    scout = scout_cur.fetchone()
+    b = tuple(map(int, scout['impa_sector'].split(';'))) if len(scout['impa_sector']) >1 else '('+str(scout['impa_sector']) + ')'
 
+    sectors_sql = 'select sector from impacted_sector_order where sec_id in ' + str(b)
+
+    sectors_cur = db.execute(sectors_sql)
+    current_sectors = sectors_cur.fetchall()
+
+    sectors_cur = db.execute('select sec_id, sector from impacted_sector_order')
+    all_sectors = sectors_cur.fetchall()
+
+    ##########################################################################
+    form = TechScoutForm()
+
+    if request.method == 'POST':
+        trigger = True
+        checkbox = request.form.getlist('mycheckbox')
+
+        if len(checkbox) ==0:
+            trigger = False #
+
+        if form.validate_on_submit():
+
+            if repeat_scout_checker(form, mode = 'full_check'):
+                flash(f'Edit field: please do not submit repeated content', 'danger')
+            else:
+                # commit changes
+                db.execute('''
+                            update tech_main_log
+                            set contributor = ?, tech_name = ?, scout_time = ?, description = ?, impact = ?, desc_source = ?, asso_names = ?, impa_sector = ?, emb_techs = ?, wiki_link = ?, category = ?
+                            where log_id = ?
+
+                            ''', (user['user_id'], form.tech_name.data, datetime.timestamp(datetime.now()), form.description.data, form.impact.data, form.sources.data, form.associate_names.data, ';'.join(checkbox), form.embed_tech.data, form.wikilink.data, form.category.data, log_id))
+
+                # we might need some cleaner functions here
+                db.commit()
+                flash(f'Tech Scout Updated', 'success')
+                return redirect(url_for('view_scout',log_id=log_id))
+        else:
+            flash(form.errors if len(form.errors)!= 0 else 'Select Impact Sectors', 'danger')
+
+    return render_template('edit_scout.html', title='Edit Tech Scout', form = form, user = user, scout = scout, sectors = all_sectors, selected_sec = current_sectors )
+#################################################################################
+
+
+
+@app.route("/final_edit_scout/<tech>", methods = ['GET', 'POST'])
+def final_edit_scout(tech):
+    """
+    For editor users, see a form submitted by any user. Make modification and commit to main table.
+    """
+    db = get_db()
+    user = get_current_user()
+    if not user:
+        return redirect(url_for('login'))
+    if user['can_edit'] == 0:
+        flash('No access to TechAnalytics. Please contact administrators', 'danger')
+        return redirect(url_for('home'))
+
+    ################# get the scout that will be edited ########################
+
+    scout_cur = db.execute('''
+                            select *, datetime(scout_time,'unixepoch') scout_time_dt
+                            from tech_main_log join users
+                            on contributor = user_id
+                            where tech_name = ?
+                            ''', [tech])
+    scout = scout_cur.fetchone()
+    b = tuple(map(int, scout['impa_sector'].split(';'))) if len(scout['impa_sector']) >1 else '('+str(scout['impa_sector']) + ')'
+
+    sectors_sql = 'select sector from impacted_sector_order where sec_id in ' + str(b)
+
+    sectors_cur = db.execute(sectors_sql)
+    current_sectors = sectors_cur.fetchall()
+
+    sectors_cur = db.execute('select sec_id, sector from impacted_sector_order')
+    all_sectors = sectors_cur.fetchall()
+    ############################################################################
+
+    form = TechScoutForm()
+
+    if request.method == 'POST':
+        trigger = True
+        checkbox = request.form.getlist('mycheckbox')
+
+        if len(checkbox) ==0:
+            trigger = False #
+
+        if form.validate_on_submit():
+
+            if repeat_scout_checker(form, mode = 'full_check'):
+                flash(f'Edit field: please do not submit repeated content', 'danger')
+            else:
+                # commit changes
+                db.execute('''
+                            update tech_main_log
+                            set contributor = ?, tech_name = ?, scout_time = ?, description = ?, impact = ?, desc_source = ?, asso_names = ?, impa_sector = ?, emb_techs = ?, wiki_link = ?, category = ?
+                            where log_id = ?
+
+                            ''', (user['user_id'], form.tech_name.data, datetime.timestamp(datetime.now()), form.description.data, form.impact.data, form.sources.data, form.associate_names.data, ';'.join(checkbox), form.embed_tech.data, form.wikilink.data, form.category.data, log_id))
+
+                # we might need some cleaner functions here
+                db.commit()
+                flash(f'Tech Scout Updated', 'success')
+                return redirect(url_for('view_scout',log_id=log_id))
+        else:
+            flash(form.errors if len(form.errors)!= 0 else 'Select Impact Sectors', 'danger')
+
+    return render_template('edit_scout.html', title='Final Edit Tech Scout', form = form, user = user, scout = scout, sectors = all_sectors, selected_sec = current_sectors )
+
+@app.route("/view_all_stories/<tech>", methods = ['GET', 'POST'])
+def view_all_stories(tech):
+    db = get_db()
+    user = get_current_user()
+
+    stories_cur = db.execute('''
+                            select
+                                tsl.log_s_id log_s_id,
+                                tsl.tech_name,
+                                tsl.milestone,
+                                substr(tsl.story_content, 1, 100)|| '...' story_content, tsl.story_year,
+                                tsl.contributor contributor_id,
+                                u.username contributor_name, datetime(tsl.contribute_time,'unixepoch') contribute_time
+                            from tech_story_log tsl, users u, milestones m
+                            where tsl.tech_name = ?
+                            and tsl.contributor = u.user_id
+                            and tsl.milestone = m.ms_name
+                            order by tsl.story_year asc, m.milestone_id
+
+                            ''', [tech])
+    stories_results = stories_cur.fetchall()
+
+    return render_template('view_all_stories.html', title='View Progress',  user = user, stories = stories_results, tech=tech)
+
+@app.route("/final_edit_story/<tech>", methods = ['GET', 'POST'])
+def final_edit_story(tech):
+    """
+    For editor users, see a form submitted by any user. Make modification and commit to main table.
+    """
+    user = get_current_user()
+    if not user:
+        return redirect(url_for('login'))
+    if user['can_analyse'] == 0:
+        flash('No access to TechAnalytics. Please contact administrators', 'danger')
+        return redirect(url_for('home'))
+
+    # get the log that will be edited
+    db = get_db()
+    story_cur = db.execute('''
+                            select *, datetime(contribute_time,'unixepoch') contribute_time_dt
+                            from tech_story_log tsl join users
+                            on contributor = user_id
+                            where tech_name = ?
+                            ''', [tech])
+    story = story_cur.fetchone()
+
+    tech = story['tech_name']
+
+    form = EditTechStoryForm()
+    form.milestone.choices = milestones_tuplist
+
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            if repeat_story_checker(form):
+                flash(f'Edit field: please do not submit repeated content', 'danger')
+            else:
+                # commit changes
+                db.execute('''update tech_story_log
+                              set contributor = ?, contribute_time = ?, story_year = ?, story_date = ?, story_content = ?, milestone = ?, sources = ?
+                              where log_s_id = ?''', (user['user_id'], datetime.timestamp(datetime.now()), form.story_year.data, form.story_date.data, form.story_content.data, form.milestone.data,  form.sources.data, log_s_id))
+
+                # we might need some cleaner functions here
+                db.commit()
+                flash(f'Tech Story Updated', 'success')
+                return redirect(url_for('tech_analytics',tech=tech))
+
+
+    return render_template('edit_log.html', title='Final Edit Tech Story', form = form, user = user, story = story)
 
 @app.route('/logout')
 def logout():

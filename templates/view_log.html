@@ -7,115 +7,42 @@
 
 {% block content %}
 
-<h1>Technology Analytics: {{ tech }}</h1>
-<h5>Deepdive into technologies we have. Find stories and milestones.</h5>
-<div class="container">
-    <form method="POST" action="">
-        {{ form.hidden_tag() }}
-        {{ form.csrf_token }}
-        <div class="row" style = "margin-bottom: 15px; margin-top: 15px">
+<div div class="col-lg-12">
 
-            <div class="col-sm-6">
-                <!-- <form method="POST" action=""> -->
-                    <div class="content-section">
-                      <div class = "row">
-
-                      <div class = "col-sm">
-                        <div class="form-group">
-                                <b>{{ form.story_year.label(class="form-control-label") }}</b>
-                                {% if form.story_year.errors %}
-                                    {{ form.story_year(class="form-control form-control-lg is-invalid") }}
-                                    <div class="invalid-feedback">
-                                        {% for error in form.story_year.errors %}
-                                            <span>{{ error }}</span>
-                                        {% endfor %}
-                                    </div>
-                                {% else %}
-                                    {{ form.story_year(class="form-control form-control-lg") }}
-                                {% endif %}
-
-                        </div>
-                      </div>
-                      <div class = "col-sm">
-                        <div class="form-group">
-                                <b>{{ form.story_date.label(class="form-control-label") }}</b>
-                                {% if form.story_date.errors %}
-                                    {{ form.story_date(class="form-control form-control-lg is-invalid") }}
-                                    <div class="invalid-feedback">
-                                        {% for error in form.story_date.errors %}
-                                            <span>{{ error }}</span>
-                                        {% endfor %}
-                                    </div>
-                                {% else %}
-                                    {{ form.story_date(class="form-control form-control-lg") }}
-                                {% endif %}
-                        </div>
-                      </div>
-                      </div>
-                        <div class="form-group">
-                                <b>{{ form.milestone.label(class="form-control-label") }}</b>
-                                <p><small><font color="grey">Is this a milestone story? Input "None" if not.</font></small></p>
-                                {% if form.milestone.errors %}
-                                    {{ form.milestone(class="form-control form-control-lg is-invalid") }}
-                                    <div class="invalid-feedback">
-                                        {% for error in form.milestone.errors %}
-                                            <span>{{ error }}</span>
-                                        {% endfor %}
-                                    </div>
-                                {% else %}
-                                    {{ form.milestone(class="form-control form-control-lg") }}
-                                {% endif %}
-                        </div>
-
-                        <div class="form-group">
-                                <b>{{ form.story_content.label(class="form-control-label") }}</b>
-                                <p><small><font color="grey">The content of the story.</font></small></p>
-                                {% if form.story_content.errors %}
-                                    {{ form.story_content(class="form-control form-control-lg is-invalid") }}
-                                    <div class="invalid-feedback">
-                                        {% for error in form.story_content.errors %}
-                                            <span>{{ error }}</span>
-                                        {% endfor %}
-                                    </div>
-                                {% else %}
-                                    {{ form.story_content(class="form-control form-control-lg") }}
-                                {% endif %}
-                        </div>
-
-                        <div class="form-group">
-                                <b>{{ form.sources.label(class="form-control-label") }}</b>
-                                <p><small><font color="grey">Use ";" to split multi sources, less than 3 sources preferred.</font></small></p>
-                                {% if form.sources.errors %}
-                                    {{ form.sources(class="form-control form-control-lg is-invalid") }}
-                                    <div class="invalid-feedback">
-                                        {% for error in form.sources.errors %}
-                                            <span>{{ error }}</span>
-                                        {% endfor %}
-                                    </div>
-                                {% else %}
-                                    {{ form.sources(class="form-control form-control-lg") }}
-                                {% endif %}
-                        </div>
-
-                        <div class="form-group">
-                            {{ form.submit(class="btn btn-outline-info") }}
-                        </div>
-
-                    </div>
-                <!-- </form> -->
-            </div>
-            
+    <h4>View Tech Story: </h4>
 
 
+    <div class = "content-section">
+      <h6>Technology Name: </h6>
+      {{ story['tech_name']}}
+    </div>
+
+    <div class = "content-section">
+      <h6>Story Time</h6>
+      {{ story['story_year']}} {% if story['story_date'] %} story['story_date'] {% endif %}
+    </div>
+
+    <div class = "content-section">
+    <h6>Milestone</h6>
+      {% if story['milestone'] != 'None' %}  {{ story['milestone'] }} {% else %} This is a non-milestone story {% endif %}
+    </div>
+
+    <div class = "content-section">
+    <h6>Story Content: </h6>
+      {{ story['story_content']}}
+    </div>
+
+    <div class = "content-section">
+    <h6>Sources: </h6>
+      {{ story['source'] }}
+    </div>
+
+    <div class = "content-section">
+    <h6>Contributor: </h6>
+      {{ story['username'] }}
+    </div>
 
 
-
-            </div>
-
-
-        </div>
-
-    </form>
 </div>
 
 {% endblock content %}

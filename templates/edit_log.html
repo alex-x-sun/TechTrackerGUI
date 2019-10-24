@@ -1,0 +1,114 @@
+{% extends "layout.html" %}
+{% from "show_links.html" import show_links %}
+
+{% block nav %}
+{{ show_links(user) }}
+{% endblock %}
+
+{% block content %}
+
+
+    <h5>You are editing a tech story of: {{ story['tech_name']}} </h5>
+    <p><small><font color="grey">Latest Edit by {{ story['username'] }} at {{ story['contribute_time_dt'] }}</font></small></p>
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+        {{ form.csrf_token }}
+
+    <div class = "content-section">
+        <div class = "row">
+          <div class = "col-sm">
+            <div class="form-group">
+                <b>{{ form.story_year.label(class="form-control-label") }}: </b>
+                <p><small><font color="grey">{{ story['story_year']}}</font></small></p>
+                {% if form.story_year.errors %}
+                  {{ form.story_year(class="form-control form-control-lg is-invalid") }}
+                <div class="invalid-feedback">
+                  {% for error in form.story_year.errors %}
+                        <span>{{ error }}</span>
+                  {% endfor %}
+                </div>
+            {% else %}
+              {{ form.story_year(class="form-control form-control-lg") }}
+            {% endif %}
+            </div>
+          </div>
+
+          <div class = "col-sm">
+            <div class="form-group">
+                <b>{{ form.story_date.label(class="form-control-label") }}: </b>
+                <p><small><font color="grey">{% if story['story_date'] %} {{ story['story_date']}} {% else %} NA {% endif %}</font></small></p>
+                {% if form.story_date.errors %}
+                  {{ form.story_date(class="form-control form-control-lg is-invalid") }}
+                <div class="invalid-feedback">
+                  {% for error in form.story_date.errors %}
+                        <span>{{ error }}</span>
+                  {% endfor %}
+                </div>
+            {% else %}
+              {{ form.story_date(class="form-control form-control-lg") }}
+            {% endif %}
+            </div>
+          </div>
+        </div>
+    </div>
+
+    <div class = "content-section">
+      <div class="form-group">
+        <b>{{ form.milestone.label(class="form-control-label") }}</b>
+        <p><small><font color="grey">{{ story['milestone']}}</font></small></p>
+        {% if form.milestone.errors %}
+            {{ form.milestone(class="form-control form-control-lg is-invalid") }}
+            <div class="invalid-feedback">
+                {% for error in form.milestone.errors %}
+                    <span>{{ error }}</span>
+                {% endfor %}
+            </div>
+        {% else %}
+            {{ form.milestone(class="form-control form-control-lg") }}
+        {% endif %}
+      </div>
+    </div>
+
+    <div class = "content-section">
+      <div class="form-group">
+        <b>{{ form.story_content.label(class="form-control-label") }}</b>
+        <p><small><font color="grey">{{ story['story_content']}}</font></small></p>
+        {% if form.story_content.errors %}
+            {{ form.story_content(class="form-control form-control-lg is-invalid") }}
+            <div class="invalid-feedback">
+                {% for error in form.story_content.errors %}
+                    <span>{{ error }}</span>
+                {% endfor %}
+            </div>
+        {% else %}
+            {{ form.story_content(class="form-control form-control-lg") }}
+        {% endif %}
+      </div>
+
+    </div>
+
+    <div class = "content-section">
+      <div class="form-group">
+        <b>{{ form.sources.label(class="form-control-label") }}</b>
+        <p><small><font color="grey">{{ story['sources']}}</font></small></p>
+        {% if form.sources.errors %}
+            {{ form.sources(class="form-control form-control-lg is-invalid") }}
+            <div class="invalid-feedback">
+                {% for error in form.sources.errors %}
+                    <span>{{ error }}</span>
+                {% endfor %}
+            </div>
+        {% else %}
+            {{ form.sources(class="form-control form-control-lg") }}
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="form-group">
+      {{ form.submit(class="btn btn-outline-info") }}
+    </div>
+
+    </form>
+
+
+{% endblock content %}

@@ -23,6 +23,7 @@
                       <div class = "col-sm">
                         <div class="form-group">
                                 <b>{{ form.story_year.label(class="form-control-label") }}</b>
+                                <p><small><font color="grey">YYYY</font></small></p>
                                 {% if form.story_year.errors %}
                                     {{ form.story_year(class="form-control form-control-lg is-invalid") }}
                                     <div class="invalid-feedback">
@@ -39,6 +40,7 @@
                       <div class = "col-sm">
                         <div class="form-group">
                                 <b>{{ form.story_date.label(class="form-control-label") }}</b>
+                                <p><small><font color="grey">MM/DD (or blank)</font></small></p>
                                 {% if form.story_date.errors %}
                                     {{ form.story_date(class="form-control form-control-lg is-invalid") }}
                                     <div class="invalid-feedback">
@@ -102,8 +104,8 @@
                         </div>
 
                     </div>
-                <!-- </form> -->
-            </div>
+    </form>
+    </div>
             <div class="col-sm-4">
                 <!-- <form method="POST" action=""> -->
                 <div class="row" style = "margin-bottom: 15px; margin-top: 15px">
@@ -114,10 +116,10 @@
                     {% endfor %}
 
 
-                  </div>
                 </div>
+            </div>
 
-                <div>
+            <div>
                 <h5>Current Progress</h5>
                 <table id="example" class="table table-responsive-sm" >
                   <thead>
@@ -143,27 +145,21 @@
                           <td>{{ story['contributor_name'] }}</td>
                           <td>{{ story['contribute_time'] }}</td>
                           <td>
-                            <a href = "{{ url_for('log_edit', tech=tech) }}" role="button"  class="btn btn-outline-info ">View</a>
+                            <a href = "{{ url_for('view_log', log_s_id= story['log_s_id']) }}" role="button"  class="btn btn-outline-info ">View</a>
                           </td>
                           <td>
-                            <a href = "{{ url_for('log_edit', tech=tech) }}" role="button"  class="btn {% if story['contributor_id'] == user['user_id'] %} btn-outline-info {% else %} btn-outline-secondary disabled {% endif %}">Edit</a>
+                            <a href = "{{ url_for('edit_log', log_s_id= story['log_s_id'], mode='edit' ) }}" role="button"  class="btn {% if story['contributor_id'] == user['user_id'] %} btn-outline-info {% else %} btn-outline-secondary disabled {% endif %}">Edit</a>
                           </td>
                       </tr>
                   </tbody>
                   {% endfor %}
                 </table>
-                </div>
-
-
-
-
-
             </div>
 
 
-        </div>
 
-    </form>
-</div>
+
+
+
 
 {% endblock content %}
