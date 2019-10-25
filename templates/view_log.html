@@ -9,13 +9,22 @@
 
 <div div class="col-lg-12">
 
-    <h4>View Tech Story: </h4>
-
-
-    <div class = "content-section">
-      <h6>Technology Name: </h6>
-      {{ story['tech_name']}}
+  <div class = "row">
+    <div class = "col">
+      <h5>You are viewing: {{ story['tech_name']}} </h5>
+      <p><small><font color="grey">Latest story/edit by {{ story['contributor'] }} at {{ story['contribute_time_dt'] }}</font></small></p>
     </div>
+    <div class = "col">
+      <div class="btn-group btn-group-sm pull-right mt-1" role="group">
+        {% if mode == 'edit' %}
+          <a href="{{ url_for('commit_story', story = story) }}" role="button"  class="btn btn-outline-info ">Commit to the main database</a>
+        {% else %}
+          <a href="{{ url_for('tech_analytics', tech=story['tech_name']) }}" role="button"  class="btn btn-outline-info ">Analysis & Add Stories</a>
+        {% endif %}
+        <a href="{{ url_for('edit_log', log_s_id=story['log_s_id']) }}" role="button"  class="btn  {% if user['can_edit'] == 0 %}  btn-outline-secondary disabled {% else %} btn-outline-info {% endif %} pull-right">Edit story Content</a>
+      </div>
+    </div>
+  </div>
 
     <div class = "content-section">
       <h6>Story Time</h6>

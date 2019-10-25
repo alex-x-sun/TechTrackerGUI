@@ -371,13 +371,15 @@ def task_board_e():
     ## sqlite3 specific datetime function!!
     task_cur = db.execute('''
                             select
+                                tml.log_id log_id,
                                 tml.tech_name tech_name,
                                 tml.scout_count scout_count,
                                 tml.latest_scout,
+                                tml.change_committed change_committed,
                                 tsl.story_count story_count,
                                 tsl.latest_commit latest_commit
                             from
-                                (select distinct tech_name, count(*) scout_count,
+                                (select distinct tech_name, max(log_id) log_id, count(*) scout_count, max(change_committed) change_committed,
                                 max(datetime(scout_time,'unixepoch')) latest_scout
                                  from tech_main_log
                                  group by tech_name) tml left join
@@ -397,7 +399,8 @@ def task_board_e():
 
 
 @app.route("/view_log/<log_s_id>", methods = ['GET', 'POST'])
-def view_log(log_s_id):
+@app.route("/view_log/<log_s_id>/<mode>", methods = ['GET', 'POST'])
+def view_log(log_s_id, mode = 'analytics'):
     """
     For all users, see a form submitted by him/herself or other users. Users can only edit his/her own form and rewrite the corresponding entry in log table.
     """
@@ -410,14 +413,14 @@ def view_log(log_s_id):
 
     db = get_db()
     story_cur = db.execute('''
-                            select *
+                            select *, datetime(contribute_time,'unixepoch') contribute_time_dt
                             from tech_story_log tsl join users
                             on contributor = user_id
                             where log_s_id = ?
                             ''', [log_s_id])
     story = story_cur.fetchone()
 
-    return render_template('view_log.html', title='View Tech Story', user = user, story = story)
+    return render_template('view_log.html', title='View Tech Story', user = user, story = story, mode=mode)
 
 @app.route("/edit_log/<log_s_id>", methods = ['GET', 'POST'])
 def edit_log(log_s_id):
@@ -465,7 +468,8 @@ def edit_log(log_s_id):
     return render_template('edit_log.html', title='View Tech Story', form = form, user = user, story = story)
 
 @app.route("/view_scout/<log_id>", methods = ['GET', 'POST'])
-def view_scout(log_id):
+@app.route("/view_scout/<log_id>/<mode>", methods = ['GET', 'POST'])
+def view_scout(log_id, mode = 'analytics' ):
     user = get_current_user()
     if not user:
         return redirect(url_for('login'))
@@ -486,7 +490,7 @@ def view_scout(log_id):
     sectors_cur = db.execute(sectors_sql)
     sectors = sectors_cur.fetchall()
 
-    return render_template('view_scout.html', title='View Tech Scout', user = user, scout = scout, sectors = sectors)
+    return render_template('view_scout.html', title='View Tech Scout', user = user, scout = scout, sectors = sectors, mode = mode)
 
 ###### Merge this function/route with the previous one in the future ############
 @app.route("/edit_scout/<log_id>", methods = ['GET', 'POST'])
@@ -551,6 +555,30 @@ def edit_scout(log_id):
     return render_template('edit_scout.html', title='Edit Tech Scout', form = form, user = user, scout = scout, sectors = all_sectors, selected_sec = current_sectors )
 #################################################################################
 
+@app.route("/commit_scout/<log_id>", methods = ['GET', 'POST'])
+def commit_scout(log_id):
+    """
+    For editor users, commit a tech story to main table.
+    """
+    user = get_current_user()
+    db = get_db()
+    if not user:
+        return redirect(url_for('login'))
+    if user['can_edit'] == 0:
+        flash('No access. Please contact administrators', 'danger')
+        return redirect(url_for('home'))
+
+    db.execute('''
+                update tech_main_log
+                set change_committed = 'true'
+                where log_id = ?
+               ''', [log_id])
+
+    db.commit()
+    
+
+    flash('Congrats! New technology scout committed to the main database.', 'success')
+    return redirect(url_for('home'))
 
 
 @app.route("/final_edit_scout/<tech>", methods = ['GET', 'POST'])
@@ -600,27 +628,48 @@ def final_edit_scout(tech):
             if repeat_scout_checker(form, mode = 'full_check'):
                 flash(f'Edit field: please do not submit repeated content', 'danger')
             else:
-                # commit changes
+                ############# commit changes to log tables #####################
                 db.execute('''
                             update tech_main_log
                             set contributor = ?, tech_name = ?, scout_time = ?, description = ?, impact = ?, desc_source = ?, asso_names = ?, impa_sector = ?, emb_techs = ?, wiki_link = ?, category = ?
                             where log_id = ?
 
                             ''', (user['user_id'], form.tech_name.data, datetime.timestamp(datetime.now()), form.description.data, form.impact.data, form.sources.data, form.associate_names.data, ';'.join(checkbox), form.embed_tech.data, form.wikilink.data, form.category.data, log_id))
-
                 # we might need some cleaner functions here
                 db.commit()
-                flash(f'Tech Scout Updated', 'success')
+
+                is_use = 1 if form.category.data == 'use' else 0
+                is_prod = 1 if form.category.data == 'product' else 0
+                is_proc = 1 if form.category.data == 'process' else 0
+
+                ########### commit changes to main tables ######################
+                db.execute('''
+                            insert into tech_main
+                                (name, description, impact, is_use, is_prod, is_proc)
+                            values
+                                (?, ?, ?, ?, ?, ?)
+                            ''', [form.tech_name.data, form.description.data, form.impact.data, form.sources.data, is_use, is_prod, is_proc])
+                db.commit()
+                ########### commit to other related tables #####################
+                # if there are any
+
+                flash(f'Tech Scout Updated and commited to the main database', 'success')
                 return redirect(url_for('view_scout',log_id=log_id))
         else:
             flash(form.errors if len(form.errors)!= 0 else 'Select Impact Sectors', 'danger')
 
     return render_template('edit_scout.html', title='Final Edit Tech Scout', form = form, user = user, scout = scout, sectors = all_sectors, selected_sec = current_sectors )
 
+
 @app.route("/view_all_stories/<tech>", methods = ['GET', 'POST'])
 def view_all_stories(tech):
     db = get_db()
     user = get_current_user()
+    if not user:
+        return redirect(url_for('login'))
+    if user['can_edit'] == 0:
+        flash('No access. Please contact administrators', 'danger')
+        return redirect(url_for('home'))
 
     stories_cur = db.execute('''
                             select
@@ -629,6 +678,7 @@ def view_all_stories(tech):
                                 tsl.milestone,
                                 substr(tsl.story_content, 1, 100)|| '...' story_content, tsl.story_year,
                                 tsl.contributor contributor_id,
+                                tsl.change_committed,
                                 u.username contributor_name, datetime(tsl.contribute_time,'unixepoch') contribute_time
                             from tech_story_log tsl, users u, milestones m
                             where tsl.tech_name = ?
@@ -641,50 +691,25 @@ def view_all_stories(tech):
 
     return render_template('view_all_stories.html', title='View Progress',  user = user, stories = stories_results, tech=tech)
 
-@app.route("/final_edit_story/<tech>", methods = ['GET', 'POST'])
-def final_edit_story(tech):
+
+
+@app.route("/commit_story/<story>", methods = ['GET', 'POST'])
+def commit_story(story):
     """
-    For editor users, see a form submitted by any user. Make modification and commit to main table.
+    For editor users, commit a tech story to main table.
     """
     user = get_current_user()
+    db = get_db()
     if not user:
         return redirect(url_for('login'))
-    if user['can_analyse'] == 0:
-        flash('No access to TechAnalytics. Please contact administrators', 'danger')
+    if user['can_edit'] == 0:
+        flash('No access. Please contact administrators', 'danger')
         return redirect(url_for('home'))
 
-    # get the log that will be edited
-    db = get_db()
-    story_cur = db.execute('''
-                            select *, datetime(contribute_time,'unixepoch') contribute_time_dt
-                            from tech_story_log tsl join users
-                            on contributor = user_id
-                            where tech_name = ?
-                            ''', [tech])
-    story = story_cur.fetchone()
 
-    tech = story['tech_name']
+    flash('Congrats! New technology story committed to the main database.', 'success')
 
-    form = EditTechStoryForm()
-    form.milestone.choices = milestones_tuplist
-
-    if request.method == 'POST':
-        if form.validate_on_submit():
-            if repeat_story_checker(form):
-                flash(f'Edit field: please do not submit repeated content', 'danger')
-            else:
-                # commit changes
-                db.execute('''update tech_story_log
-                              set contributor = ?, contribute_time = ?, story_year = ?, story_date = ?, story_content = ?, milestone = ?, sources = ?
-                              where log_s_id = ?''', (user['user_id'], datetime.timestamp(datetime.now()), form.story_year.data, form.story_date.data, form.story_content.data, form.milestone.data,  form.sources.data, log_s_id))
-
-                # we might need some cleaner functions here
-                db.commit()
-                flash(f'Tech Story Updated', 'success')
-                return redirect(url_for('tech_analytics',tech=tech))
-
-
-    return render_template('edit_log.html', title='Final Edit Tech Story', form = form, user = user, story = story)
+    return redirect(url_for('home'))
 
 @app.route('/logout')
 def logout():
@@ -708,3 +733,4 @@ def admin():
 
 if __name__ == '__main__':
     app.run(debug=True)
+# ps -fA | grep python

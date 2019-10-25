@@ -28,7 +28,8 @@ CREATE TABLE tech_main_log (
   emb_techs text,
   edited boolean,
   wiki_link text,
-  category text
+  category text,
+  change_commited boolean NOT NULL DEFAULT false
 );
 
 
@@ -42,7 +43,8 @@ CREATE TABLE tech_story_log (
   story_date text,
   story_content text NOT NULL,
   milestone text NOT NULL,
-  source text
+  source text,
+  change_commited boolean NOT NULL DEFAULT false
 );
 
 CREATE TABLE tech_story (
@@ -81,3 +83,8 @@ CREATE TABLE "milestones" (
   "milestone_id" INTEGER,
   "ms_name" TEXT
 )
+
+CREATE TABLE tech_wiki (
+    tech_id integer PRIMARY KEY REFERENCES tech_main(id),
+    wiki_link text
+);
