@@ -7,12 +7,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 import json
 import pandas as pd
-from datetime import datetime
-
+from datetime import datetime, timedelta
+import time
 # for sqlite3 database test
 import sqlite3
 from dbTest import connect_db,  get_db
-
+from random import randrange
 # if use Hydrogen or Jupyter
 # ipython3 kernelspec install-self
 
@@ -96,6 +96,44 @@ def repeat_story_checker(form):
     existing_ms = existing_ms_cur.fetchone()
     return existing_ms
 
+def random_date(year):
+    """
+    This function will return a random datetime in a year
+    """
+    start = datetime.strptime(str(year) + '/01/01', '%Y/%m/%d')
+    end = datetime.strptime(str(year+1) + '/01/01', '%Y/%m/%d')
+    delta = end - start
+    int_delta = (delta.days * 24 * 60 * 60) + delta.seconds
+    random_second = randrange(int_delta)
+    return datetime.timestamp(start + timedelta(seconds=random_second))
+
+# random_date(1996)
+
+#################################################################################
+# form = ['A','B','C','D','E']
+# sql_where = 'where'
+# for field in form[:-1]:
+#     sql_where += str(field) + ' = ? and '
+#
+# sql_where += str(form[-1]) + ' = ? '
+# sql_where
+
+def repeat_checker(form, table_name):
+    """
+    This function requires that the field naming should be consistent in all tables and forms
+    """
+    db = get_db()
+    form_data = [field.data for field in form]
+    sql_where = 'where'
+    for field in form[:-1]:
+        sql_where += str(field.name) + ' = ? and '
+
+    sql_where += str(form[-1].name) + ' = ? '
+
+    existing_cur = db.execute('select * from' + str(table_name) + sql_where, form_data)
+    existing = existing_cur.fetchone()
+
+    return existing
 #################################################################################
 
 
@@ -208,7 +246,7 @@ def tech_scout():
             trigger = False #?
 
 
-        if form.validate_on_submit():
+        if form.validate_on_submit() and trigger:
 
             if repeat_scout_checker(form):
                 flash(f'Scout field: The Technology {form.tech_name.data} already exists. Please check.', 'danger')
@@ -568,97 +606,86 @@ def commit_scout(log_id):
         flash('No access. Please contact administrators', 'danger')
         return redirect(url_for('home'))
 
+    log_cur = db.execute('select * from tech_main_log where log_id = ?',[log_id])
+    log = log_cur.fetchone()
+
+    is_use = 1 if log['category'] == 'use' else 0
+    is_prod = 1 if log['category']  == 'product' else 0
+    is_proc = 1 if log['category']  == 'process' else 0
+
+    ########### commit changes to main tables ######################
+    tech_main_cur = db.execute('select * from tech_main where name = ?',[log['tech_name']])
+    tech_main_result = tech_main_cur.fetchone()
+
+    if tech_main_result:
+        db.execute('''
+                    update tech_main
+                    set name = ?,
+                        description = ?,
+                        impact = ?,
+                        impa_sector = ?,
+                        is_use = ?,
+                        is_prod = ?,
+                        is_proc = ?
+                   ''',[log['tech_name'], log['description'], log['impact'], log['impa_sector'], is_use, is_prod, is_proc])
+        db.commit()
+
+        ########### commit to other related tables #####################
+        # embedded techs
+        db.execute('''
+                    update tech_embed
+                    set embed_li = ?
+                    where id = ?
+                    ''', [log['emb_techs'], tech_main_result['id']])
+        db.commit()
+
+
+
+    else: # if this is a new tech
+        db.execute('''
+                    insert into tech_main
+                        (name, description, impact, impa_sector, is_use, is_prod, is_proc)
+                    values
+                        (?, ?, ?, ?, ?, ?, ?)
+                    ''', [log['tech_name'], log['description'], log['impact'], log['impa_sector'], is_use, is_prod, is_proc])
+        db.commit()
+
+        tech_main_cur = db.execute('select * from tech_main where name = ?',[log['tech_name']])
+        tech_main_result = tech_main_cur.fetchone()
+
+        ########### commit to other related tables #####################
+        # embedded techs
+        db.execute('''
+                    insert into tech_embed
+                        (id, embed_li)
+                    values
+                        (?, ?)
+                    ''', [tech_main_result['id'], log['emb_techs']])
+        db.commit()
+
+    # associated names to the lookup table
+    for name in list(map(lambda x:x.strip(), log['asso_names'].split(';'))):
+        db.execute('''
+                    insert into tech_lookup
+                        (tech_main_id, tech_lookup_name)
+                    values
+                        (?, ?)
+                    ''', [tech_main_result['id'], name])
+        db.commit()
+
+    ########### change the commit status #############################
     db.execute('''
                 update tech_main_log
-                set change_committed = 'true'
+                set change_committed = ?
                 where log_id = ?
-               ''', [log_id])
+               ''', [datetime.timestamp(datetime.now()), log_id])
 
     db.commit()
-    
+
 
     flash('Congrats! New technology scout committed to the main database.', 'success')
     return redirect(url_for('home'))
 
-
-@app.route("/final_edit_scout/<tech>", methods = ['GET', 'POST'])
-def final_edit_scout(tech):
-    """
-    For editor users, see a form submitted by any user. Make modification and commit to main table.
-    """
-    db = get_db()
-    user = get_current_user()
-    if not user:
-        return redirect(url_for('login'))
-    if user['can_edit'] == 0:
-        flash('No access to TechAnalytics. Please contact administrators', 'danger')
-        return redirect(url_for('home'))
-
-    ################# get the scout that will be edited ########################
-
-    scout_cur = db.execute('''
-                            select *, datetime(scout_time,'unixepoch') scout_time_dt
-                            from tech_main_log join users
-                            on contributor = user_id
-                            where tech_name = ?
-                            ''', [tech])
-    scout = scout_cur.fetchone()
-    b = tuple(map(int, scout['impa_sector'].split(';'))) if len(scout['impa_sector']) >1 else '('+str(scout['impa_sector']) + ')'
-
-    sectors_sql = 'select sector from impacted_sector_order where sec_id in ' + str(b)
-
-    sectors_cur = db.execute(sectors_sql)
-    current_sectors = sectors_cur.fetchall()
-
-    sectors_cur = db.execute('select sec_id, sector from impacted_sector_order')
-    all_sectors = sectors_cur.fetchall()
-    ############################################################################
-
-    form = TechScoutForm()
-
-    if request.method == 'POST':
-        trigger = True
-        checkbox = request.form.getlist('mycheckbox')
-
-        if len(checkbox) ==0:
-            trigger = False #
-
-        if form.validate_on_submit():
-
-            if repeat_scout_checker(form, mode = 'full_check'):
-                flash(f'Edit field: please do not submit repeated content', 'danger')
-            else:
-                ############# commit changes to log tables #####################
-                db.execute('''
-                            update tech_main_log
-                            set contributor = ?, tech_name = ?, scout_time = ?, description = ?, impact = ?, desc_source = ?, asso_names = ?, impa_sector = ?, emb_techs = ?, wiki_link = ?, category = ?
-                            where log_id = ?
-
-                            ''', (user['user_id'], form.tech_name.data, datetime.timestamp(datetime.now()), form.description.data, form.impact.data, form.sources.data, form.associate_names.data, ';'.join(checkbox), form.embed_tech.data, form.wikilink.data, form.category.data, log_id))
-                # we might need some cleaner functions here
-                db.commit()
-
-                is_use = 1 if form.category.data == 'use' else 0
-                is_prod = 1 if form.category.data == 'product' else 0
-                is_proc = 1 if form.category.data == 'process' else 0
-
-                ########### commit changes to main tables ######################
-                db.execute('''
-                            insert into tech_main
-                                (name, description, impact, is_use, is_prod, is_proc)
-                            values
-                                (?, ?, ?, ?, ?, ?)
-                            ''', [form.tech_name.data, form.description.data, form.impact.data, form.sources.data, is_use, is_prod, is_proc])
-                db.commit()
-                ########### commit to other related tables #####################
-                # if there are any
-
-                flash(f'Tech Scout Updated and commited to the main database', 'success')
-                return redirect(url_for('view_scout',log_id=log_id))
-        else:
-            flash(form.errors if len(form.errors)!= 0 else 'Select Impact Sectors', 'danger')
-
-    return render_template('edit_scout.html', title='Final Edit Tech Scout', form = form, user = user, scout = scout, sectors = all_sectors, selected_sec = current_sectors )
 
 
 @app.route("/view_all_stories/<tech>", methods = ['GET', 'POST'])
@@ -693,8 +720,8 @@ def view_all_stories(tech):
 
 
 
-@app.route("/commit_story/<story>", methods = ['GET', 'POST'])
-def commit_story(story):
+@app.route("/commit_story/<log_s_id>", methods = ['GET', 'POST'])
+def commit_story(log_s_id):
     """
     For editor users, commit a tech story to main table.
     """
@@ -706,10 +733,74 @@ def commit_story(story):
         flash('No access. Please contact administrators', 'danger')
         return redirect(url_for('home'))
 
+    # get log info
+    log_cur = db.execute('select distinct * from tech_story_log where log_s_id = ?',[log_s_id])
+    log = log_cur.fetchone()
+
+    # check if tech exists
+    tech_cur = db.execute('''
+                            select * from tech_main
+                            where name = ?
+                          ''',[log['tech_name']] )
+    tech = tech_cur.fetchone()
+
+    if not tech: # if the tech does not exist, commit the tech first
+        flash('Action not allowed. Please commit the technology scout firstly', 'danger')
+        return redirect(url_for('task_board_e'))
+
+    tech_id = tech['id']
+
+    # check if the milestone exists
+    story_cur = db.execute('''
+                              select * from tech_story
+                              where name = ?
+                              and story_content = ?
+                              and milestone = ?
+                              and story_year = ?
+                           ''', [log['tech_name'], log['story_content'] ,  log['milestone'], log['story_year']])
+    existing_story = story_cur.fetchone()
+
+    if existing_story:
+        flash('The same story already exists', 'danger')
+        return redirect(url_for('view_log'))
+
+
+
+    ########### prepare the variables #############################
+    if log['story_date']:
+        story_time = datetime.timestamp((datetime.strptime(str(log['story_year']) + '/' + log['story_date'], '%Y/%m/%d')))
+        exact_time = 1
+    else:
+        story_time = random_date(log['story_year'])
+        exact_time = 0
+
+    db.execute('''
+                  insert into tech_story
+                    (id, name, story_time, story_content, milestone, exact_time, source_check, sources, story_year)
+                  values
+                    (?,?,?,?,?,?,?,?,?)
+               ''',[ tech_id, log['tech_name'], story_time, log['story_content'], log['milestone'], exact_time, 1, log['sources'], log['story_year'] ] )
+    db.commit()
+
+    ########### commit to other related tables #####################
+    # if there are any
+
+
+    ########### change the commit status ###########################
+    db.execute('''
+                update tech_story_log
+                set change_committed = ?
+                where log_s_id = ?
+               ''', [datetime.timestamp(datetime.now()), log_s_id])
+
+    db.commit()
+
 
     flash('Congrats! New technology story committed to the main database.', 'success')
 
-    return redirect(url_for('home'))
+    return redirect(url_for('task_board_e'))
+
+
 
 @app.route('/logout')
 def logout():

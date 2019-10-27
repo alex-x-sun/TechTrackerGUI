@@ -36,7 +36,7 @@ class LoginForm(FlaskForm):
 class TechScoutForm(FlaskForm):
     tech_name = StringField('Technology Name*',
                             validators=[DataRequired(), Length(min=2, max=40)])
-    associate_names = StringField('Associate Names*', validators=[DataRequired(),Regexp(regex = regex_words_semicolumns ,message="letters or numbers separated by ; only")])
+    associate_names = StringField('Associate Names*', validators=[DataRequired(),Regexp(regex = regex_words_semicolumns , message="letters or numbers separated by ; only")])
     category =  SelectField('Properties*', choices = [('product','Product'),('process', 'Process'),('use','Use')])
     description = TextAreaField('Technology Description*',render_kw={"rows": 12},
                             validators=[DataRequired(), Length(min=2)])

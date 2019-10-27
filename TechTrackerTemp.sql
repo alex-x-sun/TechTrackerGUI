@@ -5,13 +5,24 @@ CREATE TABLE tech_main (
     is_prod boolean NOT NULL DEFAULT false,
     is_proc boolean NOT NULL DEFAULT false,
     description text,
-    impact text
+    impact text,
+    impa_sector text,
+    unique(id, name)
 );
+
 
 CREATE TABLE tech_lookup (
   lookup_id integer PRIMARY KEY autoincrement,
   tech_main_id NOT NULL REFERENCES tech_main(id),
-  tech_lookup_name text NOT NULL
+  tech_lookup_name text NOT NULL,
+  unique(tech_main_id, tech_lookup_name)
+);
+
+CREATE TABLE tech_embed (
+    id integer PRIMARY KEY REFERENCES tech_main(id),
+    embed_li character varying,
+    embed_main_techs character varying,
+    embed_main_tech_ids character varying
 );
 
 CREATE TABLE tech_main_log (
@@ -29,10 +40,9 @@ CREATE TABLE tech_main_log (
   edited boolean,
   wiki_link text,
   category text,
-  change_commited boolean NOT NULL DEFAULT false
+  change_committed timestamp without time zone,
+
 );
-
-
 
 CREATE TABLE tech_story_log (
   log_s_id integer PRIMARY KEY autoincrement,
@@ -43,8 +53,9 @@ CREATE TABLE tech_story_log (
   story_date text,
   story_content text NOT NULL,
   milestone text NOT NULL,
-  source text,
-  change_commited boolean NOT NULL DEFAULT false
+  sources text,
+  change_committed timestamp without time zone，
+
 );
 
 CREATE TABLE tech_story (
@@ -56,8 +67,9 @@ CREATE TABLE tech_story (
     milestone text,
     exact_time integer,
     source_check integer,
-    source text,
-    year integer NOT NULL
+    sources text,
+    story_year integer NOT NULL
+
 );
 
 CREATE TABLE users (

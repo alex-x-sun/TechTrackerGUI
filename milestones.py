@@ -32,7 +32,7 @@ def ToMachineReadable(char):
     """
     return char.lower().strip().replace(' ', '_')
 
-milestones_tuplist = [('None', 'None')] + [(text_pretty(ms), text_pretty(ms)) for ms in milestones_0[:-1]]
+milestones_tuplist = [('None', 'None Milestone Story')] + [(text_pretty(ms), text_pretty(ms)) for ms in milestones_0[:-1]]
 
 
 

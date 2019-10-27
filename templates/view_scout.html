@@ -16,7 +16,7 @@
     <div class = "col">
       <div class="btn-group btn-group-sm pull-right mt-1" role="group">
         {% if mode == 'edit' %}
-          <a href="{{ url_for('commit_scout', log_id = scout['log_id']) }}" role="button"  class="btn btn-outline-info ">Commit to the main database</a>
+          <a href="{{ url_for('commit_scout', log_id = scout['log_id']) }}" role="button"  class="btn {% if user['admin'] == 0 %}  btn-outline-secondary disabled {% else %} btn-outline-info {% endif %} ">Commit to the main database</a>
         {% else %}
           <a href="{{ url_for('tech_analytics', tech=scout['tech_name']) }}" role="button"  class="btn btn-outline-info ">Analysis & Add Stories</a>
         {% endif %}
