@@ -33,7 +33,7 @@
                         </div>
                         <div class="form-group">
                                 <b>{{ form.associate_names.label(class="form-control-label") }}</b>
-                                <p><small><font color="grey">What other name do people use to call this technology. Use ";" between names. Type <b><strong>None</strong></b> if not applicable</font></small></p>
+                                <p><small><font color="grey">What other name do people use to call this technology. Use ";" or "," between names. Type <b><strong>None</strong></b> if not applicable</font></small></p>
                                 {% if form.associate_names.errors %}
                                     {{ form.associate_names(class="form-control form-control-lg is-invalid") }}
                                     <div class="invalid-feedback">
@@ -93,7 +93,7 @@
 
                         <div class="form-group">
                                 <b>{{ form.embed_tech.label(class="form-control-label") }}</b>
-                                <p><small><font color="grey">What other technologies is this technolog based upon.</font></small></p>
+                                <p><small><font color="grey">What other technologies is this technolog based upon? Use ";" or "," between names.</font></small></p>
                                 {% if form.embed_tech.errors %}
                                     {{ form.embed_tech(class="form-control form-control-lg is-invalid") }}
                                     <div class="invalid-feedback">
@@ -154,9 +154,9 @@
                       {{ form.submit(class="btn btn-outline-info")}}
                     </div>
 
-                    <div class= "row" style = "margin-bottom: 10px; margin-top: 10px;">
-                      <a href="{% if tech_name %}{{ url_for('tech_analytics', tech=tech_name) }}{% endif %}" role="button"  class="btn  {% if user['can_analyse'] == 0 or not tech_name%}  btn-outline-secondary disabled {% else %} btn-outline-info {% endif %} ">Proceed to Analytics</a>
-                    </div>
+                    <!-- <div class= "row" style = "margin-bottom: 10px; margin-top: 10px;">
+                      <a href="{% if tech_name %}{{ url_for('tech_analytics', tech=form.tech_name.data) }}{% endif %}" role="button"  class="btn  {% if (user['can_analyse'] == 0) or (form.tech_name.data == None) %}  btn-outline-secondary disabled {% else %} btn-outline-info {% endif %} ">Proceed to Analytics</a>
+                    </div> -->
 
 
                   </div>

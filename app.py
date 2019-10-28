@@ -261,6 +261,7 @@ def tech_scout():
                 # we might need some cleaner functions here
                 db.commit()
                 flash(f'Technology {form.tech_name.data} added', 'success')
+                return redirect(url_for('home'))
 
         else:
             flash(form.errors if len(form.errors)!= 0 else 'Select Impact Sectors', 'danger') #spits out any and all errors**
@@ -639,8 +640,6 @@ def commit_scout(log_id):
                     ''', [log['emb_techs'], tech_main_result['id']])
         db.commit()
 
-
-
     else: # if this is a new tech
         db.execute('''
                     insert into tech_main
@@ -762,7 +761,7 @@ def commit_story(log_s_id):
 
     if existing_story:
         flash('The same story already exists', 'danger')
-        return redirect(url_for('view_log'))
+        return redirect(url_for('view_log', log_s_id = log['log_s_id'] ))
 
 
 
@@ -784,7 +783,7 @@ def commit_story(log_s_id):
 
     ########### commit to other related tables #####################
     # if there are any
-
+    
 
     ########### change the commit status ###########################
     db.execute('''
@@ -798,7 +797,7 @@ def commit_story(log_s_id):
 
     flash('Congrats! New technology story committed to the main database.', 'success')
 
-    return redirect(url_for('task_board_e'))
+    return redirect(url_for('view_all_stories', tech=log['tech_name']))
 
 
 

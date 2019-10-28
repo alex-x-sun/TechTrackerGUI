@@ -58,12 +58,14 @@
     </div>
 
     <div class = "content-section">
-      <h6><font color="grey">Sources: </h6>
-      {% if scout['wiki_link'] %}
-        <p><small><font color="grey">Wikipedia link:</font></small></p>
-        <h6>{{ scout['wiki_link']}}</h6>
-      {% endif %}
-      <h6>{{ scout['desc_source']}}</h6>
+
+        <h6><font color="grey">Sources: </h6>
+        {% if scout['wiki_link'] %}
+          <p><small><font color="grey">Wikipedia link:</font></small></p>
+          <h6>{{ scout['wiki_link']}}</h6>
+        {% endif %}
+        <h6>{{ scout['desc_source']}}</h6>
+
     </div>
 
 
