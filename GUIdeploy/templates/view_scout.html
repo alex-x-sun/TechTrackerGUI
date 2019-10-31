@@ -1,0 +1,76 @@
+{% extends "layout.html" %}
+{% from "show_links.html" import show_links %}
+
+{% block nav %}
+{{ show_links(user) }}
+{% endblock %}
+
+{% block content %}
+
+<div div class="col-lg-12">
+  <div class = "row">
+    <div class = "col">
+      <h5>You are viewing: {{ scout['tech_name']}} </h5>
+      <p><small><font color="grey">Latest scout/edit by {{ scout['username'] }} at {{ scout['scout_time_dt'] }}</font></small></p>
+    </div>
+    <div class = "col">
+      <div class="btn-group btn-group-sm pull-right mt-1" role="group">
+        {% if mode == 'edit' %}
+          <a href="{{ url_for('commit_scout', log_id = scout['log_id']) }}" role="button"  class="btn {% if user['admin'] == 0 %}  btn-outline-secondary disabled {% else %} btn-outline-info {% endif %} ">Commit to the main database</a>
+        {% else %}
+          <a href="{{ url_for('tech_analytics', tech=scout['tech_name']) }}" role="button"  class="btn btn-outline-info ">Analysis & Add Stories</a>
+        {% endif %}
+        <a href="{{ url_for('edit_scout', log_id=scout['log_id']) }}" role="button"  class="btn  {% if user['can_edit'] == 0 %}  btn-outline-secondary disabled {% else %} btn-outline-info {% endif %} pull-right">Edit Scout Content</a>
+      </div>
+    </div>
+  </div>
+
+    <div class = "content-section">
+      <h6><font color="grey">Technology Name & Category: </h6>
+      <h6>{{ scout['tech_name']}} ( {{ scout['category']}} )</h6>
+    </div>
+
+    <div class = "content-section">
+      <h6><font color="grey">Associated Names: </h6>
+      <h6>{{ scout['asso_names']}}</h6>
+    </div>
+
+    <div class = "content-section">
+      <h6><font color="grey">Embedded Technology: </h6>
+      <h6>{{ scout['emb_techs']}}</h6>
+    </div>
+
+    <div class = "content-section">
+      <h6><font color="grey">Description: </h6>
+      <h6>{{ scout['description'] }}</h6>
+    </div>
+
+    <div class = "content-section">
+      <h6><font color="grey">Built Environment Impact: </h6>
+      <h6>{{ scout['impact'] }}</h6>
+    </div>
+
+    <div class = "content-section">
+      <h6><font color="grey">Impact Sectors: </h6>
+        {% for sec in sectors %}
+          <h6>{{ sec['sector'] }}</h6>
+        {% endfor %}
+    </div>
+
+    <div class = "content-section">
+
+        <h6><font color="grey">Sources: </h6>
+        {% if scout['wiki_link'] %}
+          <p><small><font color="grey">Wikipedia link:</font></small></p>
+          <h6>{{ scout['wiki_link']}}</h6>
+        {% endif %}
+        <h6>{{ scout['desc_source']}}</h6>
+
+    </div>
+
+
+
+
+</div>
+
+{% endblock content %}

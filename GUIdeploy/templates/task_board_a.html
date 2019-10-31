@@ -1,0 +1,39 @@
+{% extends "layout.html" %}
+{% from "show_links.html" import show_links %}
+
+{% block nav %}
+{{ show_links(user) }}
+{% endblock %}
+
+{% block content %}
+
+<div class="row">
+        <div class="col-lg-12">
+          <div class="list-group">
+            {% if tasks %}
+              {% for task in tasks %}
+
+              <div class = "list-group-item">
+                <div class = "row">
+                  <div class = "col">
+                    <h4 class="list-group-item-heading">{{ task['tech_name'] }} </h4>
+                    <p><small><font color="grey"> by {{ task['contributor_name'] }} at {{ task['scout_time'] }} </font></small></p>
+
+                  </div>
+                  <div class = "col">
+                    <div class="btn-group btn-group-sm pull-right mt-1" role="group">
+                      <a href="{{ url_for('view_scout', log_id=task['log_id']) }}" role="button"  class="btn btn-outline-info ">View Scout Details</a>
+                      <a href="{{ url_for('tech_analytics', tech=task['tech_name']) }}" role="button"  class="btn btn-outline-info ">Analysis & Add Stories</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            {% else %}
+            <h5>We need new technology scouts!</h5>
+            {% endif %}
+          </div>
+        </div><!-- /.col-lg-12 -->
+      </div>
+
+{% endblock %}

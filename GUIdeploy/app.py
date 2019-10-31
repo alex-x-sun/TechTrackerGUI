@@ -8,9 +8,14 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import json
 import pandas as pd
 from datetime import datetime, timedelta
+import pytz
 import time
+# You might need to check this:
+# https://indradhanush.github.io/blog/dealing-with-datetime-objects-in-python/
+default_tz = pytz.timezone('US/Eastern')
+
 # for sqlite3 database test
-import sqlite3
+# import sqlite3
 from dbTest import connect_db,  get_db
 from random import randrange
 # if use Hydrogen or Jupyter
@@ -19,140 +24,32 @@ from random import randrange
 # for milestone string process
 from milestones import milestones, milestones_tuplist
 
+# for helper functions
+from helper_functions import get_current_user, random_date, repeat_checker, repeat_scout_checker, repeat_story_checker
 
 ###############################################################################
 app = Flask(__name__)
 app.config['SECRET_KEY'] = '5791628bb0b13ce0c676dfde280ba245'
 
-posts = [
-    {
-        'author': 'Corey Schafer',
-        'title': 'Blog Post 1',
-        'content': 'First post content',
-        'date_posted': 'April 20, 2018'
-    },
-    {
-        'author': 'Jane Doe',
-        'title': 'Blog Post 2',
-        'content': 'Second post content',
-        'date_posted': 'April 21, 2018'
-    }
-]
 
-
-############ helper functions #################################################
-def get_current_user():
-    user_result = None
-
-    if 'user' in session:
-        user_email = session['user']
-
-        db = get_db()
-        user_cur = db.execute('select user_id, email, password, can_scout, can_analyse, can_edit, admin from users where email = ?', [user_email])
-        user_result = user_cur.fetchone()
-
-    return user_result
-
-def repeat_scout_checker(form, mode = 'scout_only'):
-    db = get_db()
-
-    # check repeat form
-    if mode == 'scout_only':
-        existing_sc_cur = db.execute('''
-                                    select log_id
-                                    from tech_main_log
-                                    where tech_name = ?
-                                    ''', [form.tech_name.data])
-        existing_sc = existing_sc_cur.fetchone()
-    elif mode == 'full_check':
-        existing_sc_cur = db.execute('''
-                                    select log_id
-                                    from tech_main_log
-                                    where tech_name = ?
-                                    and description = ?
-                                    and impact = ?
-
-                                    and asso_names = ?
-                                    and emb_techs = ?
-                                    and category = ?
-                                    and desc_source = ?
-                                    ''', [form.tech_name.data, form.description.data, form.impact.data, form.associate_names.data, form.embed_tech.data, form.category.data, form.sources.data])
-        existing_sc = existing_sc_cur.fetchone()
-
-    return existing_sc
-
-def repeat_story_checker(form):
-    db = get_db()
-    # check repeat form
-    existing_ms_cur = db.execute('''
-                                select log_s_id
-                                from tech_story_log
-                                where story_year = ?
-                                and story_date = ?
-                                and milestone = ?
-                                and story_content = ?
-                                and sources = ?
-                                ''', [form.story_year.data, form.story_date.data, form.milestone.data, form.story_content.data, form.sources.data])
-    existing_ms = existing_ms_cur.fetchone()
-    return existing_ms
-
-def random_date(year):
-    """
-    This function will return a random datetime in a year
-    """
-    start = datetime.strptime(str(year) + '/01/01', '%Y/%m/%d')
-    end = datetime.strptime(str(year+1) + '/01/01', '%Y/%m/%d')
-    delta = end - start
-    int_delta = (delta.days * 24 * 60 * 60) + delta.seconds
-    random_second = randrange(int_delta)
-    return datetime.timestamp(start + timedelta(seconds=random_second))
-
-# random_date(1996)
-
-#################################################################################
-# form = ['A','B','C','D','E']
-# sql_where = 'where'
-# for field in form[:-1]:
-#     sql_where += str(field) + ' = ? and '
-#
-# sql_where += str(form[-1]) + ' = ? '
-# sql_where
-
-def repeat_checker(form, table_name):
-    """
-    This function requires that the field naming should be consistent in all tables and forms
-    """
-    db = get_db()
-    form_data = [field.data for field in form]
-    sql_where = 'where'
-    for field in form[:-1]:
-        sql_where += str(field.name) + ' = ? and '
-
-    sql_where += str(form[-1].name) + ' = ? '
-
-    existing_cur = db.execute('select * from' + str(table_name) + sql_where, form_data)
-    existing = existing_cur.fetchone()
-
-    return existing
-#################################################################################
 
 
 @app.teardown_appcontext
-def close_db(error):
-    if hasattr(g, 'sqlite_db'):
-        g.sqlite_db.close()
-
 # def close_db(error):
-#     if hasattr(g, 'postgres_db_cur'):
-#         g.postgres_db_cur.close()
-#     if hasattr(g, 'postgres_db_cunn'):
-#         g.postgres_db_conn.close()
+#     if hasattr(g, 'sqlite_db'):
+#         g.sqlite_db.close()
+
+def close_db(error):
+    if hasattr(g, 'postgres_db_cur'):
+        g.postgres_db_cur.close()
+    if hasattr(g, 'postgres_db_cunn'):
+        g.postgres_db_conn.close()
 
 @app.route("/")
 @app.route("/home")
 def home():
     user = get_current_user()
-    return render_template('home.html', posts=posts, user = user)
+    return render_template('home.html',  user = user)
 
 
 @app.route("/about")
@@ -174,16 +71,14 @@ def register():
             user_email = str(form.email.data).lower()
             hashed_password = generate_password_hash(form.password.data, method='sha256')
 
-            existing_user_cur = db.execute('select user_id from users where email = ? or username = ?', [user_email, username])
-            existing_user = existing_user_cur.fetchone()
+            db.execute('select user_id from users where email = %s or username = %s', (user_email, username))
+            existing_user = db.fetchone()
 
             if existing_user:
                 flash('User email already exist', 'danger')
 
             else:
-                db.execute('insert into users (username, email, password) values (?, ?, ?)', [username, user_email, hashed_password])
-                db.commit()
-
+                db.execute('insert into users (username, email, password) values (%s, %s, %s)', (username, user_email, hashed_password))
 
                 flash('Account created', 'success')
                 session['user'] = form.email.data
@@ -207,8 +102,8 @@ def login():
             user_email = str(form.email.data).lower()
             password = form.password.data
 
-            user_cur = db.execute('select user_id, email, password, can_scout, can_analyse, can_edit, admin from users where email = ?',[user_email])
-            user_result = user_cur.fetchone()
+            db.execute('select user_id, email, password, can_scout, can_analyse, can_edit, admin from users where email = %s',(user_email, ))
+            user_result = db.fetchone()
 
             if user_result:
 
@@ -237,8 +132,8 @@ def tech_scout():
     # sectors = ['Land Selection ', 'Design ' ,'Entitlement ', 'Capital Stack ', 'Construction ','Leasing & Brokerage ','Asset Monitoring & Operations ','Acquisition & Disposition ','Demolition ','Redevelopment ']
     #####################################################################################################
     db = get_db()
-    sectors_cur = db.execute('select sec_id, sector from impacted_sector_order')
-    sectors_results = sectors_cur.fetchall()
+    db.execute('select sec_id, sector from impacted_sector_order')
+    sectors_results = db.fetchall()
 
     form = TechScoutForm()
 
@@ -249,7 +144,7 @@ def tech_scout():
         checkbox = request.form.getlist('mycheckbox')
 
         if len(checkbox) ==0:
-            trigger = False #?
+            trigger = False #%s
 
 
         if form.validate_on_submit() and trigger:
@@ -261,11 +156,11 @@ def tech_scout():
                             insert into tech_main_log
                                 (contributor, tech_name, scout_time, description, impact, desc_source, asso_names, impa_sector, emb_techs, wiki_link, category)
                             values
-                                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                            ''', [user['user_id'], form.tech_name.data, datetime.timestamp(datetime.now()), form.description.data, form.impact.data, form.sources.data, form.associate_names.data, ';'.join(checkbox), form.embed_tech.data, form.wikilink.data, form.category.data])
+                                (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            ''', (user['user_id'], form.tech_name.data, datetime.now(default_tz), form.description.data, form.impact.data, form.sources.data, form.associate_names.data, ';'.join(checkbox), form.embed_tech.data, form.wikilink.data, form.category.data))
 
                 # we might need some cleaner functions here
-                db.commit()
+
                 flash(f'Technology {form.tech_name.data} added', 'success')
                 return redirect(url_for('home'))
 
@@ -281,9 +176,6 @@ def tech_scout():
 
     return render_template('tech_scout.html', title='Technology Scout', user= user, form=form, sectors = sectors_results, tech_name=tech_name)
 
-#################### NEXT STEPS: USE SESSION TO MAKE THE CONFIRMATION PAGE ###################
-
-##############################################################################################
 
 @app.route("/task_board_a", methods = ['GET', 'POST'])
 def task_board_a():
@@ -297,19 +189,18 @@ def task_board_a():
     ## NOTE: Here we query the tech_main_log table #######
     db = get_db()
     ## sqlite3 specific datetime function!!
-    task_cur = db.execute('''select
-                                tml.log_id log_id,
-                                tml.tech_name tech_name,
-                                datetime(tml.scout_time,'unixepoch') scout_time,
-                                u.username contributor_name
-                            from tech_main_log tml, users u
-                            where tml.tech_name in
-                                (select distinct tech_name from tech_main_log)
-                            and tml.contributor = u.user_id
-                            group by tech_name
-                            order by lower(tech_name) asc''')
+    db.execute('''select
+                    log_id,
+                    tech_name,
+                    to_char(tml.scout_time, 'YYYY-MM-DD HH24:MI') scout_time,
+                    username contributor_name
+                from (tech_main_log tml join users u on tml.contributor = u.user_id)
+                where tech_name in
+                    (select distinct tech_name from tech_main_log)
 
-    task_result = task_cur.fetchall()
+                order by lower(tech_name) asc''')
+
+    task_result = db.fetchall()
 
     return render_template('task_board_a.html', title='Task Board', user= user, tasks = task_result)
 
@@ -331,24 +222,27 @@ def tech_analytics(tech):
 ################## TEST ONLY ########################
 # use tech_story in the future
 # sqlite3 specific functions: substr() for substring(), || for concat()
-    stories_cur = db.execute('''
+    db.execute('''
                             select
-                                tsl.log_s_id log_s_id,
-                                tsl.milestone,
-                                substr(tsl.story_content, 1, 100)|| '...' story_content, tsl.story_year,
-                                tsl.contributor contributor_id,
-                                u.username contributor_name, datetime(tsl.contribute_time,'unixepoch') contribute_time
-                            from tech_story_log tsl, users u, milestones m
-                            where tsl.tech_name = ?
-                            and tsl.contributor = u.user_id
-                            and tsl.milestone = m.ms_name
-                            order by tsl.story_year asc, m.milestone_id
+                                log_s_id,
+                                milestone,
+                                substr(story_content, 1, 100)|| '...' story_content,
+                                story_year,
+                                contributor contributor_id,
+                                username contributor_name,
+                                to_char(contribute_time, 'YYYY-MM-DD HH24:MI') contribute_time
+                            from tech_story_log inner join milestones on milestone = ms_name
+                                inner join users on contributor = user_id
 
-                            ''', [tech])
-    stories_results = stories_cur.fetchall()
+                            where tech_name = %s
+
+                            order by story_year, milestone_id asc
+
+                            ''', (tech,))
+    stories_results = db.fetchall()
 
 
-    ms_cur = db.execute('''
+    db.execute('''
                             select ms_left.ms_name ms_name, ms.milestone_id ms_id
                             from milestones ms,
                                  (select distinct m.ms_name
@@ -358,12 +252,12 @@ def tech_analytics(tech):
 
                                   select distinct milestone ms
                                   from tech_story_log
-                                  where tech_name = ?) ms_left
+                                  where tech_name = %s) ms_left
                             where ms_left.ms_name = ms.ms_name
                             order by ms.milestone_id
 
-                           ''', [tech])
-    ms_left = ms_cur.fetchall()
+                           ''', (tech,))
+    ms_left = db.fetchall()
     ms_left_l = [row[0] for row in ms_left]
 #####################################################
     form = TechAnalyticsForm()
@@ -378,13 +272,13 @@ def tech_analytics(tech):
 
         if form.validate_on_submit():
             # check repeat form
-            existing_ms_cur = db.execute('''
+            db.execute('''
                                         select log_s_id
                                         from tech_story_log
-                                        where story_content = ?
-                                        and contributor = ?
-                                        ''', [form.story_content.data, user['user_id']])
-            existing_ms = existing_ms_cur.fetchone()
+                                        where story_content = %s
+                                        and contributor = %s
+                                        ''', (form.story_content.data, user['user_id']))
+            existing_ms = db.fetchone()
 
             if existing_ms:
                 flash('You have already submitted this story', 'danger')
@@ -392,14 +286,13 @@ def tech_analytics(tech):
                 # commit changes
                 db.execute('''insert into tech_story_log
                                 (contributor, tech_name, contribute_time, story_year, story_date, story_content, milestone, sources)
-                              values (?, ?, ?, ?, ?, ?, ?, ?)''', [user['user_id'], tech, datetime.timestamp(datetime.now()), form.story_year.data, form.story_date.data, form.story_content.data, form.milestone.data,  form.sources.data])
+                              values (%s, %s, %s, %s, %s, %s, %s, %s)''', (user['user_id'], tech, datetime.now(default_tz), form.story_year.data, form.story_date.data, form.story_content.data, form.milestone.data,  form.sources.data))
 
                 # we might need some cleaner functions here
-                db.commit()
                 flash(f'New story added', 'success')
                 return redirect(url_for('tech_analytics',tech=tech))
 
-    return render_template('tech_analytics.html', title='Technology Analytics', form=form, user= user,  milestones = milestones[:-1], ms_left = ms_left_l, stories = stories_results, tech=tech)
+    return render_template('tech_analytics.html', title='Technology Analytics', form=form, user= user,  milestones = milestones[1:], ms_left = ms_left_l, stories = stories_results, tech=tech)
 
 @app.route("/task_board_e", methods = ['GET', 'POST'])
 def task_board_e():
@@ -414,21 +307,21 @@ def task_board_e():
     ## NOTE: Here we query the tech_main_log table #######
     db = get_db()
     ## sqlite3 specific datetime function!!
-    task_cur = db.execute('''
+    db.execute('''
                             select
                                 tml.log_id log_id,
                                 tml.tech_name tech_name,
                                 tml.scout_count scout_count,
-                                tml.latest_scout,
+                                to_char(tml.latest_scout,'YYYY-MM-DD HH24:MI') latest_scout,
                                 tml.change_committed change_committed,
                                 tsl.story_count story_count,
-                                tsl.latest_commit latest_commit
+                                to_char(tsl.latest_commit,'YYYY-MM-DD HH24:MI') latest_commit
                             from
                                 (select distinct tech_name, max(log_id) log_id, count(*) scout_count, max(change_committed) change_committed,
-                                max(datetime(scout_time,'unixepoch')) latest_scout
+                                max(scout_time) latest_scout
                                  from tech_main_log
                                  group by tech_name) tml left join
-                                (select distinct tech_name, count(*) story_count, max(datetime(contribute_time,'unixepoch')) latest_commit
+                                (select distinct tech_name, count(*) story_count, max(contribute_time) latest_commit
                                  from tech_story_log
                                  group by tech_name) tsl
 
@@ -437,7 +330,7 @@ def task_board_e():
                             order by lower(tml.tech_name) asc
                          ''')
 
-    task_result = task_cur.fetchall()
+    task_result = db.fetchall()
 
     return render_template('task_board_e.html', title='Task Board', user= user, tasks = task_result)
 
@@ -457,13 +350,13 @@ def view_log(log_s_id, mode = 'analytics'):
         return redirect(url_for('home'))
 
     db = get_db()
-    story_cur = db.execute('''
-                            select *, datetime(contribute_time,'unixepoch') contribute_time_dt
+    db.execute('''
+                            select *, to_char(contribute_time,'YYYY-MM-DD HH24:MI') contribute_time_dt
                             from tech_story_log tsl join users
                             on contributor = user_id
-                            where log_s_id = ?
-                            ''', [log_s_id])
-    story = story_cur.fetchone()
+                            where log_s_id = %s
+                            ''', (log_s_id,))
+    story = db.fetchone()
 
     return render_template('view_log.html', title='View Tech Story', user = user, story = story, mode=mode)
 
@@ -481,13 +374,13 @@ def edit_log(log_s_id):
 
     # get the log that will be edited
     db = get_db()
-    story_cur = db.execute('''
-                            select *, datetime(contribute_time,'unixepoch') contribute_time_dt
+    db.execute('''
+                            select *, to_char(contribute_time,'YYYY-MM-DD HH24:MI') contribute_time_dt
                             from tech_story_log tsl join users
                             on contributor = user_id
-                            where log_s_id = ?
-                            ''', [log_s_id])
-    story = story_cur.fetchone()
+                            where log_s_id = %s
+                            ''', (log_s_id,))
+    story = db.fetchone()
 
     tech = story['tech_name']
 
@@ -501,11 +394,11 @@ def edit_log(log_s_id):
             else:
                 # commit changes
                 db.execute('''update tech_story_log
-                              set contributor = ?, contribute_time = ?, story_year = ?, story_date = ?, story_content = ?, milestone = ?, sources = ?
-                              where log_s_id = ?''', (user['user_id'], datetime.timestamp(datetime.now()), form.story_year.data, form.story_date.data, form.story_content.data, form.milestone.data,  form.sources.data, log_s_id))
+                              set contributor = %s, contribute_time = %s, story_year = %s, story_date = %s, story_content = %s, milestone = %s, sources = %s
+                              where log_s_id = %s''', (user['user_id'], datetime.now(default_tz), form.story_year.data, form.story_date.data, form.story_content.data, form.milestone.data,  form.sources.data, log_s_id))
 
                 # we might need some cleaner functions here
-                db.commit()
+
                 flash(f'Tech Story Updated', 'success')
                 return redirect(url_for('tech_analytics',tech=tech))
 
@@ -520,20 +413,20 @@ def view_scout(log_id, mode = 'analytics' ):
         return redirect(url_for('login'))
 
     db = get_db()
-    scout_cur = db.execute('''
-                            select *, datetime(scout_time,'unixepoch') scout_time_dt
+    db.execute('''
+                            select *, scout_time scout_time_dt
                             from tech_main_log join users
                             on contributor = user_id
-                            where log_id = ?
-                            ''', [log_id])
-    scout = scout_cur.fetchone()
+                            where log_id = %s
+                            ''', (log_id,))
+    scout = db.fetchone()
 
     b = tuple(map(int, scout['impa_sector'].split(';'))) if len(scout['impa_sector']) >1 else '('+str(scout['impa_sector']) + ')'
 
     sectors_sql = 'select sector from impacted_sector_order where sec_id in ' + str(b)
 
-    sectors_cur = db.execute(sectors_sql)
-    sectors = sectors_cur.fetchall()
+    db.execute(sectors_sql)
+    sectors = db.fetchall()
 
     return render_template('view_scout.html', title='View Tech Scout', user = user, scout = scout, sectors = sectors, mode = mode)
 
@@ -550,22 +443,22 @@ def edit_scout(log_id):
 
     ##### get the scout that will be edited ######################################
     db = get_db()
-    scout_cur = db.execute('''
-                            select *, datetime(scout_time,'unixepoch') scout_time_dt
+    db.execute('''
+                            select *, scout_time scout_time_dt
                             from tech_main_log join users
                             on contributor = user_id
-                            where log_id = ?
-                            ''', [log_id])
-    scout = scout_cur.fetchone()
+                            where log_id = %s
+                            ''', (log_id,))
+    scout = db.fetchone()
     b = tuple(map(int, scout['impa_sector'].split(';'))) if len(scout['impa_sector']) >1 else '('+str(scout['impa_sector']) + ')'
 
     sectors_sql = 'select sector from impacted_sector_order where sec_id in ' + str(b)
 
-    sectors_cur = db.execute(sectors_sql)
-    current_sectors = sectors_cur.fetchall()
+    db.execute(sectors_sql)
+    current_sectors = db.fetchall()
 
-    sectors_cur = db.execute('select sec_id, sector from impacted_sector_order')
-    all_sectors = sectors_cur.fetchall()
+    db.execute('select sec_id, sector from impacted_sector_order')
+    all_sectors = db.fetchall()
 
     ##########################################################################
     form = TechScoutForm()
@@ -585,13 +478,13 @@ def edit_scout(log_id):
                 # commit changes
                 db.execute('''
                             update tech_main_log
-                            set contributor = ?, tech_name = ?, scout_time = ?, description = ?, impact = ?, desc_source = ?, asso_names = ?, impa_sector = ?, emb_techs = ?, wiki_link = ?, category = ?
-                            where log_id = ?
+                            set contributor = %s, tech_name = %s, scout_time = %s, description = %s, impact = %s, desc_source = %s, asso_names = %s, impa_sector = %s, emb_techs = %s, wiki_link = %s, category = %s
+                            where log_id = %s
 
-                            ''', (user['user_id'], form.tech_name.data, datetime.timestamp(datetime.now()), form.description.data, form.impact.data, form.sources.data, form.associate_names.data, ';'.join(checkbox), form.embed_tech.data, form.wikilink.data, form.category.data, log_id))
+                            ''', (user['user_id'], form.tech_name.data, datetime.now(default_tz), form.description.data, form.impact.data, form.sources.data, form.associate_names.data, ';'.join(checkbox), form.embed_tech.data, form.wikilink.data, form.category.data, log_id))
 
                 # we might need some cleaner functions here
-                db.commit()
+
                 flash(f'Tech Scout Updated', 'success')
                 return redirect(url_for('view_scout',log_id=log_id))
         else:
@@ -613,50 +506,50 @@ def commit_scout(log_id):
         flash('No access. Please contact administrators', 'danger')
         return redirect(url_for('home'))
 
-    log_cur = db.execute('select * from tech_main_log where log_id = ?',[log_id])
-    log = log_cur.fetchone()
+    db.execute('select * from tech_main_log where log_id = %s',[log_id])
+    log = db.fetchone()
 
-    is_use = 1 if log['category'] == 'use' else 0
-    is_prod = 1 if log['category']  == 'product' else 0
-    is_proc = 1 if log['category']  == 'process' else 0
+    is_use = True if log['category'] == 'use' else False
+    is_prod = True if log['category']  == 'product' else False
+    is_proc = True if log['category']  == 'process' else False
 
     ########### commit changes to main tables ######################
-    tech_main_cur = db.execute('select * from tech_main where name = ?',[log['tech_name']])
-    tech_main_result = tech_main_cur.fetchone()
+    db.execute('select * from tech_main where name = %s',[log['tech_name']])
+    tech_main_result = db.fetchone()
 
     if tech_main_result:
         db.execute('''
                     update tech_main
-                    set name = ?,
-                        description = ?,
-                        impact = ?,
-                        impa_sector = ?,
-                        is_use = ?,
-                        is_prod = ?,
-                        is_proc = ?
-                   ''',[log['tech_name'], log['description'], log['impact'], log['impa_sector'], is_use, is_prod, is_proc])
-        db.commit()
+                    set name = %s,
+                        description = %s,
+                        impact = %s,
+                        impa_sector = %s,
+                        is_use = %s,
+                        is_prod = %s,
+                        is_proc = %s
+                   ''',(log['tech_name'], log['description'], log['impact'], log['impa_sector'], is_use, is_prod, is_proc))
+
 
         ########### commit to other related tables #####################
         # embedded techs
         db.execute('''
                     update tech_embed
-                    set embed_li = ?
-                    where id = ?
-                    ''', [log['emb_techs'], tech_main_result['id']])
-        db.commit()
+                    set embed_li = %s
+                    where id = %s
+                    ''', (log['emb_techs'], tech_main_result['id']))
+
 
     else: # if this is a new tech
         db.execute('''
                     insert into tech_main
                         (name, description, impact, impa_sector, is_use, is_prod, is_proc)
                     values
-                        (?, ?, ?, ?, ?, ?, ?)
-                    ''', [log['tech_name'], log['description'], log['impact'], log['impa_sector'], is_use, is_prod, is_proc])
-        db.commit()
+                        (%s, %s, %s, %s, %s, %s, %s)
+                    ''', (log['tech_name'], log['description'], log['impact'], log['impa_sector'], is_use, is_prod, is_proc))
 
-        tech_main_cur = db.execute('select * from tech_main where name = ?',[log['tech_name']])
-        tech_main_result = tech_main_cur.fetchone()
+
+        db.execute('select * from tech_main where name = %s',[log['tech_name']])
+        tech_main_result = db.fetchone()
 
         ########### commit to other related tables #####################
         # embedded techs
@@ -664,9 +557,9 @@ def commit_scout(log_id):
                     insert into tech_embed
                         (id, embed_li)
                     values
-                        (?, ?)
-                    ''', [tech_main_result['id'], log['emb_techs']])
-        db.commit()
+                        (%s, %s)
+                    ''', (tech_main_result['id'], log['emb_techs']))
+
 
     # associated names to the lookup table
     for name in list(map(lambda x:x.strip(), log['asso_names'].split(';'))):
@@ -674,18 +567,18 @@ def commit_scout(log_id):
                     insert into tech_lookup
                         (tech_main_id, tech_lookup_name)
                     values
-                        (?, ?)
-                    ''', [tech_main_result['id'], name])
-        db.commit()
+                        (%s, %s)
+                    ''', (tech_main_result['id'], name))
+
 
     ########### change the commit status #############################
     db.execute('''
                 update tech_main_log
-                set change_committed = ?
-                where log_id = ?
-               ''', [datetime.timestamp(datetime.now()), log_id])
+                set change_committed = %s
+                where log_id = %s
+               ''', (datetime.now(default_tz), log_id))
 
-    db.commit()
+
 
 
     flash('Congrats! New technology scout committed to the main database.', 'success')
@@ -703,7 +596,7 @@ def view_all_stories(tech):
         flash('No access. Please contact administrators', 'danger')
         return redirect(url_for('home'))
 
-    stories_cur = db.execute('''
+    db.execute('''
                             select
                                 tsl.log_s_id log_s_id,
                                 tsl.tech_name,
@@ -711,15 +604,15 @@ def view_all_stories(tech):
                                 substr(tsl.story_content, 1, 100)|| '...' story_content, tsl.story_year,
                                 tsl.contributor contributor_id,
                                 tsl.change_committed,
-                                u.username contributor_name, datetime(tsl.contribute_time,'unixepoch') contribute_time
+                                u.username contributor_name, tsl.contribute_time contribute_time
                             from tech_story_log tsl, users u, milestones m
-                            where tsl.tech_name = ?
+                            where tsl.tech_name = %s
                             and tsl.contributor = u.user_id
                             and tsl.milestone = m.ms_name
                             order by tsl.story_year asc, m.milestone_id
 
-                            ''', [tech])
-    stories_results = stories_cur.fetchall()
+                            ''', (tech,))
+    stories_results = db.fetchall()
 
     return render_template('view_all_stories.html', title='View Progress',  user = user, stories = stories_results, tech=tech)
 
@@ -739,15 +632,15 @@ def commit_story(log_s_id):
         return redirect(url_for('home'))
 
     # get log info
-    log_cur = db.execute('select distinct * from tech_story_log where log_s_id = ?',[log_s_id])
-    log = log_cur.fetchone()
+    db.execute('select distinct * from tech_story_log where log_s_id = %s',(log_s_id,))
+    log = db.fetchone()
 
     # check if tech exists
-    tech_cur = db.execute('''
+    db.execute('''
                             select * from tech_main
-                            where name = ?
-                          ''',[log['tech_name']] )
-    tech = tech_cur.fetchone()
+                            where name = %s
+                          ''',(log['tech_name'],) )
+    tech = db.fetchone()
 
     if not tech: # if the tech does not exist, commit the tech first
         flash('Action not allowed. Please commit the technology scout firstly', 'danger')
@@ -756,14 +649,14 @@ def commit_story(log_s_id):
     tech_id = tech['id']
 
     # check if the milestone exists
-    story_cur = db.execute('''
+    db.execute('''
                               select * from tech_story
-                              where name = ?
-                              and story_content = ?
-                              and milestone = ?
-                              and story_year = ?
-                           ''', [log['tech_name'], log['story_content'] ,  log['milestone'], log['story_year']])
-    existing_story = story_cur.fetchone()
+                              where name = %s
+                              and story_content = %s
+                              and milestone = %s
+                              and story_year = %s
+                           ''', (log['tech_name'], log['story_content'] ,  log['milestone'], log['story_year']))
+    existing_story = db.fetchone()
 
     if existing_story:
         flash('The same story already exists', 'danger')
@@ -773,7 +666,7 @@ def commit_story(log_s_id):
 
     ########### prepare the variables #############################
     if log['story_date']:
-        story_time = datetime.timestamp((datetime.strptime(str(log['story_year']) + '/' + log['story_date'], '%Y/%m/%d')))
+        story_time = datetime.strptime(str(log['story_year']) + '/' + log['story_date'], '%Y/%m/%d')
         exact_time = 1
     else:
         story_time = random_date(log['story_year'])
@@ -783,9 +676,8 @@ def commit_story(log_s_id):
                   insert into tech_story
                     (id, name, story_time, story_content, milestone, exact_time, source_check, sources, story_year)
                   values
-                    (?,?,?,?,?,?,?,?,?)
-               ''',[ tech_id, log['tech_name'], story_time, log['story_content'], log['milestone'], exact_time, 1, log['sources'], log['story_year'] ] )
-    db.commit()
+                    (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+               ''',(tech_id, log['tech_name'], story_time, log['story_content'], log['milestone'], exact_time, 1, log['sources'], log['story_year'] ) )
 
     ########### commit to other related tables #####################
     # if there are any
@@ -794,12 +686,9 @@ def commit_story(log_s_id):
     ########### change the commit status ###########################
     db.execute('''
                 update tech_story_log
-                set change_committed = ?
-                where log_s_id = ?
-               ''', [datetime.timestamp(datetime.now()), log_s_id])
-
-    db.commit()
-
+                set change_committed = %s
+                where log_s_id = %s
+               ''', (datetime.now(default_tz), log_s_id))
 
     flash('Congrats! New technology story committed to the main database.', 'success')
 
@@ -822,8 +711,8 @@ def admin():
         return redirect(url_for('home'))
 
     db = get_db()
-    users_cur = db.execute('select user_id, username, email, can_scout, can_analyse, can_edit, admin from users')
-    users_results = users_cur.fetchall()
+    db.execute('select user_id, username, email, can_scout, can_analyse, can_edit, admin from users')
+    users_results = db.fetchall()
 
     return render_template('admin.html', user=user, users=users_results)
 

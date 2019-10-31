@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+{% from "show_links.html" import show_links %}
+
+
+{% block nav %}
+{{ show_links(user) }}
+{% endblock %}
+
+
+{% block content %}
+<!-- <h1>Tech</h1> -->
+
+<div class="row" style = "margin-bottom: 15px; margin-top: 15px">
+
+	<div class="col-sm-4">
+		 <a class="list-group-item" href="{{ url_for('tech_scout') }}">Technology Scout</a>
+	</div>
+
+	<div class="col-sm-4">
+		 <a class="list-group-item" href="{{ url_for('task_board_a') }}">Technology Analytics</a>
+	</div>
+
+	<div class="col-sm-4">
+		 <a class="list-group-item" href="{{ url_for('task_board_e') }}">Technology Edit</a>
+	</div>
+</div>
+<div>
+	<img src= '/static/pics/WhatsApp Image 2019-10-26 at 14.36.50.jpeg' class = "img-responsive">
+</div>
+
+{% endblock content %}

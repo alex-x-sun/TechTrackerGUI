@@ -1,0 +1,61 @@
+{% extends "layout.html" %}
+{% from "show_links.html" import show_links %}
+
+{% block nav %}
+{{ show_links(user) }}
+{% endblock %}
+
+{% block content %}
+
+<h5>Current Progress</h5>
+<div class="table-responsive-sm">
+<table id="example" class="table " >
+  <thead class="thead-dark">
+      <tr>
+
+          <th>Technology</th>
+          <th>Story Count</th>
+          <th>Latest Scout</th>
+          <th>Latest Story</th>
+          <th> </th>
+          <th> </th>
+      </tr>
+  </thead>
+  {% for task in tasks %}
+  <tbody>
+      <tr class="{% if task['change_committed'] %} table-success {% else %} table-light {% endif %}">
+          <td>{{ task['tech_name'] }}</td>
+          <td>{{ task['story_count'] }}</td>
+          <td>{{ task['latest_scout'] }}</td>
+          <td>{{ task['latest_commit'] }}</td>
+          <td>
+            <a href = "{{ url_for('view_scout', log_id=task['log_id'], mode = 'edit' ) }}" role="button"  class="btn btn-outline-info">View/Edit Scout</a>
+          </td>
+          <td>
+            <a href = "{{ url_for('view_all_stories', tech=task['tech_name']) }}" role="button"  class="btn btn-outline-info">Edit Analytics & Stories</a>
+          </td>
+      </tr>
+  </tbody>
+  {% endfor %}
+</table>
+</div>
+
+<!-- <div class="row">
+        <div class="col-lg-12">
+          <div class="list-group">
+            {% if tasks %}
+              {% for task in tasks %}
+
+              <a href="{{ url_for('tech_analytics', tech=task['tech_name']) }}" class="list-group-item">
+                <h4 class="list-group-item-heading">{{ task['tech_name'] }} </h4>
+                <h6> by {{ task['contributor_name'] }} at {{ task['scout_time'] }} </h6>
+              </a>
+              {% endfor %}
+            {% else %}
+            <h5>We need new technology scouts!</h5>
+            {% endif %}
+          </div>
+        </div><!-- /.col-lg-12 -->
+
+
+{% endblock %}

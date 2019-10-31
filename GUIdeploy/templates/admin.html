@@ -1,0 +1,50 @@
+{% extends "layout.html" %}
+{% from "show_links.html" import show_links %}
+
+{% block nav %}
+{{ show_links(user) }}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+        <h1>Users</h1>
+        <h6>Check user roles</h6>
+      </div>
+      <div class="row">
+        <div class="col-lg-12">
+          <!-- <div class="list-group">
+            {% for user in users %}
+
+              <h6 class="list-group-item ">{{ user['username'] }}</h6>
+
+            {% endfor %}
+          </div> -->
+          <table id="example" class="table table-responsive-sm table-hover" style="width:100%">
+            <thead>
+                <tr>
+                    <th>User ID</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Scout</th>
+                    <th>Analysis</th>
+                    <th>Editor</th>
+                    <th>Admin</th>
+                </tr>
+            </thead>
+            {% for user in users %}
+            <tbody>
+                <tr>
+                    <td>{{ user['user_id'] }}</td>
+                    <td>{{ user['username'] }}</td>
+                    <td>{{ user['email'] }}</td>
+                    <td>{{ user['can_scout'] }}</td>
+                    <td>{{ user['can_analyse'] }}</td>
+                    <td>{{ user['can_edit'] }}</td>
+                    <td>{{ user['admin'] }}</td>
+                </tr>
+            </tbody>
+            {% endfor %}
+        </div><!-- /.col-lg-12 -->
+      </div>
+
+{% endblock %}
