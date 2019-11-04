@@ -25,14 +25,6 @@
       </div>
 
     </div>
-
-
-
-
-
-
-
-
                     <div class="content-section">
                         <div class="form-group">
                                 <b>{{ form.tech_name.label(class="form-control-label") }}</b>
@@ -42,14 +34,14 @@
                                     <p><small><font color="grey">{{ scout['tech_name'] }}</font></small></p>
 
                                     {% if form.tech_name.errors %}
-                                        {{ form.tech_name(class="form-control form-control-lg is-invalid") }}
+                                        {{ form.tech_name(class="form-control is-invalid") }}
                                         <div class="invalid-feedback">
                                             {% for error in form.tech_name.errors %}
                                                 <span>{{ error }}</span>
                                             {% endfor %}
                                         </div>
                                     {% else %}
-                                        {{ form.tech_name(class="form-control form-control-lg") }}
+                                        {{ form.tech_name(class="form-control ") }}
                                     {% endif %}
                                 {% endif %}
                         </div>
@@ -58,14 +50,14 @@
                                 <b>{{ form.associate_names.label(class="form-control-label") }}</b>
                                 <p><small><font color="grey">{{ scout['asso_names']}}</font></small></p>
                                 {% if form.associate_names.errors %}
-                                    {{ form.associate_names(class="form-control form-control-lg is-invalid") }}
+                                    {{ form.associate_names(class="form-control is-invalid") }}
                                     <div class="invalid-feedback">
                                         {% for error in form.associate_names.errors %}
                                             <span>{{ error }}</span>
                                         {% endfor %}
                                     </div>
                                 {% else %}
-                                    {{ form.associate_names(class="form-control form-control-lg") }}
+                                    {{ form.associate_names(class="form-control") }}
                                 {% endif %}
                         </div>
 
@@ -73,14 +65,14 @@
                                 <b>{{ form.wikilink.label(class="form-control-label") }}</b>
                                 <p><small><font color="grey">{% if scout['wiki_link'] %}{{ scout['wiki_link'] }} {% else %} NA {% endif %}</font></small></p>
                                 {% if form.wikilink.errors %}
-                                    {{ form.wikilink(class="form-control form-control-lg is-invalid") }}
+                                    {{ form.wikilink(class="form-control is-invalid") }}
                                     <div class="invalid-feedback">
                                         {% for error in form.wikilink.errors %}
                                             <span>{{ error }}</span>
                                         {% endfor %}
                                     </div>
                                 {% else %}
-                                    {{ form.wikilink(class="form-control form-control-lg") }}
+                                    {{ form.wikilink(class="form-control ") }}
                                 {% endif %}
                         </div>
 
@@ -88,14 +80,14 @@
                                 <b>{{ form.category.label(class="form-control-label") }}</b>
                                 <p><small><font color="grey">{{ scout['category'] }}</font></small></p>
                                 {% if form.category.errors %}
-                                    {{ form.category(class="form-control form-control-lg is-invalid") }}
+                                    {{ form.category(class="form-control is-invalid") }}
                                     <div class="invalid-feedback">
                                         {% for error in form.category.errors %}
                                             <span>{{ error }}</span>
                                         {% endfor %}
                                     </div>
                                 {% else %}
-                                    {{ form.category(class="form-control form-control-lg") }}
+                                    {{ form.category(class="form-control ") }}
                                 {% endif %}
                         </div>
 
@@ -104,14 +96,14 @@
                                 <b>{{ form.description.label(class="form-control-label") }}</b>
                                 <p><small><font color="grey">{{ scout['description'] }}</font></small></p>
                                     {% if form.description.errors %}
-                                        {{ form.description(class="form-control form-control-lg is-invalid") }}
+                                        {{ form.description(class="form-control form-control-sm is-invalid") }}
                                         <div class="invalid-feedback">
                                             {% for error in form.description.errors %}
                                                 <span>{{ error }}</span>
                                             {% endfor %}
                                         </div>
                                     {% else %}
-                                        {{ form.description(class="form-control form-control-lg") }}
+                                        {{ form.description(class="form-control form-control-sm") }}
                                     {% endif %}
                         </div>
 
@@ -119,14 +111,14 @@
                                 <b>{{ form.embed_tech.label(class="form-control-label") }}</b>
                                 <p><small><font color="grey">{{ scout['emb_techs'] }}</font></small></p>
                                 {% if form.embed_tech.errors %}
-                                    {{ form.embed_tech(class="form-control form-control-lg is-invalid") }}
+                                    {{ form.embed_tech(class="form-control is-invalid") }}
                                     <div class="invalid-feedback">
                                         {% for error in form.embed_tech.errors %}
                                             <span>{{ error }}</span>
                                         {% endfor %}
                                     </div>
                                 {% else %}
-                                    {{ form.embed_tech(class="form-control form-control-lg") }}
+                                    {{ form.embed_tech(class="form-control ") }}
                                 {% endif %}
                         </div>
 
@@ -134,27 +126,35 @@
                                 <b>{{ form.impact.label(class="form-control-label") }}</b>
                                 <p><small><font color="grey">{{ scout['impact']}}</font></small></p>
                                 {% if form.impact.errors %}
-                                    {{ form.impact(class="form-control form-control-lg is-invalid") }}
+                                    {{ form.impact(class="form-control form-control-sm is-invalid") }}
                                     <div class="invalid-feedback">
                                         {% for error in form.impact.errors %}
                                             <span>{{ error }}</span>
                                         {% endfor %}
                                     </div>
                                 {% else %}
-                                    {{ form.impact(class="form-control form-control-lg") }}
+                                    {{ form.impact(class="form-control form-control-sm") }}
                                 {% endif %}
                         </div>
 
                         <div>
                             <p><b>Impact Sectors*</b></p>
                             <hr></hr>
-                            {% for sec in selected_sec  %}
+                            {% for sec in selected_sec %}
 
                               <p><small><font color="grey">{{ sec['sector'] }}</font></small></p>
                             {% endfor %}
                             <hr></hr>
                             {% for s in sectors %}
-                              <p><small>{{ s['sector'] }}<input type="checkbox" value="{{ s['sec_id'] }}" name="mycheckbox"></small></p>
+                            <!-- cannot match sqlite3 object, test if works with value from postgresql  -->
+                                {% if s['sector'] in selected_sec %}  
+                                    <p><small>{{ s['sector'] }}<input type="checkbox" value="{{ s['sec_id'] }}" name="mycheckbox" checked></small></p>
+                                {% else %}
+                                    <p><small>{{ s['sector'] }}<input type="checkbox" value="{{ s['sec_id'] }}" name="mycheckbox" ></small></p>
+                                {% endif %}
+                            <!-- cannot match sqlite3 object, test if works with value from postgresql  -->
+                                <!-- <p><small>{{ s['sector'] }}<input type="checkbox" value="{{ s['sec_id'] }}" name="mycheckbox" ></small></p> -->
+
                             {% endfor %}
                             <br></br>
                         </div>
@@ -164,14 +164,14 @@
                                 <b>{{ form.sources.label(class="form-control-label") }}</b>
                                 <p><small><font color="grey">{{ scout['desc_source']}}</font></small></p>
                                 {% if form.sources.errors %}
-                                    {{ form.sources(class="form-control form-control-lg is-invalid") }}
+                                    {{ form.sources(class="form-control is-invalid") }}
                                     <div class="invalid-feedback">
                                         {% for error in form.sources.errors %}
                                             <span>{{ error }}</span>
                                         {% endfor %}
                                     </div>
                                 {% else %}
-                                    {{ form.sources(class="form-control form-control-lg") }}
+                                    {{ form.sources(class="form-control") }}
                                 {% endif %}
                         </div>
                     </div>

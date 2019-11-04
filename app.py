@@ -488,12 +488,16 @@ def edit_log(log_s_id):
                             where log_s_id = ?
                             ''', [log_s_id])
     story = story_cur.fetchone()
-
     tech = story['tech_name']
-
+    ################### add in original input
     form = EditTechStoryForm()
     form.milestone.choices = milestones_tuplist
-
+    form.milestone.data = story[7]  
+    form.story_year.data = story[4]
+    form.story_date.data = story[5]
+    form.story_content.data = story[6]
+    form.sources.data = story[8]
+    ################## add in original input
     if request.method == 'POST':
         if form.validate_on_submit():
             if repeat_story_checker(form):
@@ -568,7 +572,20 @@ def edit_scout(log_id):
     all_sectors = sectors_cur.fetchall()
 
     ##########################################################################
+    ############### add in original content ###########
+    # print('scout index', list(enumerate(scout))) # get the index from terminal... 
+    print([i for i in all_sectors[0]])
+    print('cur',[i for i in current_sectors[0]])
     form = TechScoutForm()
+    form.associate_names.data = scout[9]
+    form.category.data = scout[13]
+    form.description.data = scout[4]
+    form.impact.data = scout[6]
+    form.embed_tech.data = scout[10]
+    form.sources.data = scout[5]
+    form.wikilink.data = scout[12]
+    # tech_name,associate_names,category,description,impact,embed_tech,sources,wikilink,submit
+    ############### add in original content ###########
 
     if request.method == 'POST':
         trigger = True
